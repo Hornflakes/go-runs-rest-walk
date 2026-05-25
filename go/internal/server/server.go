@@ -26,13 +26,6 @@ func NewServer() *Server {
 	return &server
 }
 
-func echoSocket(s *Socket) {
-	for msg := range s.in {
-		s.out <- msg
-	}
-}
-
-// TODO: prevent pairing with a closed connection
 func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
 	socket, err := NewSocket(w, r)
 	if err != nil {
@@ -40,12 +33,10 @@ func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go echoSocket(socket)
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if s.waitingSocket != nil {
+	if s.waitingSocket != nil && !s.waitingSocket.closed {
 		s.out <- [2]*Socket{s.waitingSocket, socket}
 		s.waitingSocket = nil
 	} else {

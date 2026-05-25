@@ -22,6 +22,14 @@ func (s *Socket) RemoteAddr() string {
 	return s.conn.RemoteAddr().String()
 }
 
+func (s *Socket) In() <-chan SocketMessage {
+	return s.in
+}
+
+func (s *Socket) Out() chan<- SocketMessage {
+	return s.out
+}
+
 func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -59,7 +67,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
 
 			msg, err := FromSocket(payload)
 			if err != nil {
-				log.Printf("%s | %v", color.RedString("websocket message unmarshal failed"), err)
+				log.Printf("%s | %v", color.MagentaString("websocket message unmarshal failed"), err)
 				continue
 			}
 
@@ -71,7 +79,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
 		for msg := range out {
 			bytes, err := json.Marshal(msg.Message)
 			if err != nil {
-				log.Printf("%s | %v", color.RedString("websocket message marshal failed"), err)
+				log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
 				continue
 			}
 

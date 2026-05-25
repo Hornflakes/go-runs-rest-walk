@@ -49,3 +49,13 @@ func FromSocket(msg []byte) (SocketMessage, error) {
 		Message: message,
 	}, nil
 }
+
+func CreateSocketMessage(msgType int) SocketMessage {
+	return SocketMessage{
+		Type: websocket.TextMessage,
+		Message: Message{
+			Type: msgType,
+			Msg:  "",
+		},
+	}
+}
