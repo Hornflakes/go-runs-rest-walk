@@ -19,7 +19,8 @@ func main() {
 			go func(p [2]*server.Socket) {
 				ok := <-gameloop.WaitForReady(p[0], p[1])
 				if ok {
-					log.Printf("%s", color.MagentaString("websocket pair ready handshake ok"))
+					log.Printf("%s", color.GreenString("websocket pair ready handshake ok"))
+					go gameloop.NewGame(p[0], p[1]).Run()
 				} else {
 					log.Printf("%s", color.YellowString("websocket pair ready handshake failed"))
 				}
