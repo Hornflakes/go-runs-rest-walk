@@ -1,6 +1,10 @@
 package server
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/gorilla/websocket"
+)
 
 const (
 	Ready int = iota
@@ -28,4 +32,20 @@ func CreateMessage(msgType int) Message {
 		Type: msgType,
 		Msg:  "",
 	}
+}
+
+type SocketMessage struct {
+	Type    int
+	Message Message
+}
+
+func FromSocket(msg []byte) (SocketMessage, error) {
+	message, err := UnmarshalMessage(msg)
+	if err != nil {
+		return SocketMessage{}, err
+	}
+	return SocketMessage{
+		Type:    websocket.TextMessage,
+		Message: message,
+	}, nil
 }
