@@ -11,26 +11,37 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
-type Socket struct {
+type Socket interface {
+	RemoteAddr() string
+	In() <-chan SocketMessage
+	Out() chan<- SocketMessage
+	Closed() bool
+}
+
+type socketImpl struct {
 	conn   *websocket.Conn
 	in     <-chan SocketMessage
 	out    chan<- SocketMessage
 	closed bool
 }
 
-func (s *Socket) RemoteAddr() string {
+func (s *socketImpl) RemoteAddr() string {
 	return s.conn.RemoteAddr().String()
 }
 
-func (s *Socket) In() <-chan SocketMessage {
+func (s *socketImpl) In() <-chan SocketMessage {
 	return s.in
 }
 
-func (s *Socket) Out() chan<- SocketMessage {
+func (s *socketImpl) Out() chan<- SocketMessage {
 	return s.out
 }
 
-func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
+func (s *socketImpl) Closed() bool {
+	return s.closed
+}
+
+func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
@@ -39,7 +50,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
 	in := make(chan SocketMessage, 1)
 	out := make(chan SocketMessage, 1)
 
-	socket := Socket{
+	socket := socketImpl{
 		conn:   conn,
 		in:     in,
 		out:    out,
@@ -65,7 +76,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (*Socket, error) {
 				continue
 			}
 
-			msg, err := FromSocket(payload)
+			msg, err := fromSocket(payload)
 			if err != nil {
 				log.Printf("%s | %v", color.MagentaString("websocket message unmarshal failed"), err)
 				continue

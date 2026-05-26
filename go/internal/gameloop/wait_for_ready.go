@@ -6,7 +6,7 @@ import (
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-func sendAndWait(s1, s2 *server.Socket) <-chan bool {
+func sendAndWait(s1, s2 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
@@ -55,7 +55,7 @@ func sendAndWait(s1, s2 *server.Socket) <-chan bool {
 	return ready
 }
 
-func WaitForReady(s1, s2 *server.Socket) <-chan bool {
+func WaitForReady(s1, s2 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {

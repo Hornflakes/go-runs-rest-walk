@@ -9,15 +9,15 @@ import (
 )
 
 type Server struct {
-	Out <-chan [2]*Socket
+	Out <-chan [2]Socket
 
-	out           chan [2]*Socket
-	waitingSocket *Socket
+	out           chan [2]Socket
+	waitingSocket Socket
 	mutex         sync.Mutex
 }
 
 func NewServer() *Server {
-	out := make(chan [2]*Socket, 4)
+	out := make(chan [2]Socket, 4)
 	server := Server{
 		Out:           out,
 		out:           out,
@@ -36,8 +36,8 @@ func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if s.waitingSocket != nil && !s.waitingSocket.closed {
-		s.out <- [2]*Socket{s.waitingSocket, socket}
+	if s.waitingSocket != nil && !s.waitingSocket.Closed() {
+		s.out <- [2]Socket{s.waitingSocket, socket}
 		s.waitingSocket = nil
 	} else {
 		s.waitingSocket = socket

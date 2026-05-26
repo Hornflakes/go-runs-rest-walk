@@ -39,7 +39,7 @@ type SocketMessage struct {
 	Message Message
 }
 
-func FromSocket(msg []byte) (SocketMessage, error) {
+func fromSocket(msg []byte) (SocketMessage, error) {
 	message, err := UnmarshalMessage(msg)
 	if err != nil {
 		return SocketMessage{}, err
