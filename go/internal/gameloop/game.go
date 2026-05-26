@@ -11,10 +11,32 @@ import (
 type Game struct {
 	sockets [2]server.Socket
 	queue   *GameQueue
+	players [2]*Player
+	bullets []*Bullet
 }
 
 func NewGame(s1, s2 server.Socket) *Game {
-	return &Game{sockets: [2]server.Socket{s1, s2}}
+	return &Game{sockets: [2]server.Socket{s1, s2}, players: [2]*Player{
+		NewPlayer(Vector2D{1024, 0}, Vector2D{-1, 0}, 128),
+		NewPlayer(Vector2D{-1024, 0}, Vector2D{1, 0}, 256),
+	}}
+}
+
+func (g *Game) updateStateFromMessageQueue() {
+	messages := g.queue.Flush()
+	for _, message := range messages {
+		if message.Message.Type == server.Shoot {
+			player := g.players[message.From-1]
+			fired := player.Fire()
+
+			if fired {
+				bullet := CreateBulletFromPlayer(player, 32.0)
+				g.bullets = append(g.bullets, &bullet)
+
+				log.Printf("%s | player=%d bullet=%d", color.CyanString("player shot"), message.From, len(g.bullets))
+			}
+		}
+	}
 }
 
 func (g *Game) Run() {
@@ -29,7 +51,7 @@ func (g *Game) Run() {
 	startTime := time.Now()
 
 	for {
-		g.queue.Flush()
+		g.updateStateFromMessageQueue()
 
 		tickStart := time.Now().UnixMicro()
 		ticks++
