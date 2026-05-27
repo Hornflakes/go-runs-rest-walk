@@ -8,19 +8,18 @@ import (
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-func testMessages(t *testing.T, queue *gameloop.GameQueue, froms []uint) {
+func testMessages(t *testing.T, queue *gameloop.Queue, froms []uint) {
 	t.Helper()
 
 	messages := queue.Flush()
 
 	if len(messages) != len(froms) {
-		t.Errorf("got %d messages, want %d messages", len(messages), len(froms))
-		return
+		t.Fatalf("got %d messages, want %d messages", len(messages), len(froms))
 	}
 
 	for i, message := range messages {
 		if message.From != froms[i] {
-			t.Errorf("messages[%d]: got from %d, expected from %d", i, message.From, froms[i])
+			t.Errorf("messages[%d].From = %d, want %d", i, message.From, froms[i])
 		}
 	}
 
@@ -30,8 +29,8 @@ func testMessages(t *testing.T, queue *gameloop.GameQueue, froms []uint) {
 	}
 }
 
-func TestGameQueue(t *testing.T) {
-	queue := gameloop.NewGameQueue()
+func TestQueue(t *testing.T) {
+	queue := gameloop.NewQueue()
 	s1 := newTestSocket()
 	s2 := newTestSocket()
 
@@ -58,8 +57,8 @@ func TestGameQueue(t *testing.T) {
 	testMessages(t, queue, []uint{2, 1})
 }
 
-func TestGameQueueStop(t *testing.T) {
-	queue := gameloop.NewGameQueue()
+func TestQueueStop(t *testing.T) {
+	queue := gameloop.NewQueue()
 	s1 := newTestSocket()
 	s2 := newTestSocket()
 
@@ -75,6 +74,6 @@ func TestGameQueueStop(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(100 * time.Millisecond):
-		t.Fatal("queue did not stop within timeout")
+		t.Fatal("queue did not stop within timeout (possible deadlock)")
 	}
 }

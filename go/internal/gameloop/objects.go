@@ -53,7 +53,7 @@ func newBullet() Bullet {
 	}
 }
 
-func CreateBulletFromPlayer(player *Player, speed float64) Bullet {
+func CreateBulletFromPlayer(player *Player, speedMs float64) Bullet {
 	bullet := newBullet()
 
 	if player.Dir[0] == 1 {
@@ -62,8 +62,8 @@ func CreateBulletFromPlayer(player *Player, speed float64) Bullet {
 		bullet.Rect.SetPosition(player.Rect.X-BulletWidth-1, 0)
 	}
 
-	bullet.Velocity[0] = player.Dir[0] * speed
-	bullet.Velocity[1] = player.Dir[1] * speed
+	bullet.Velocity[0] = player.Dir[0] * speedMs
+	bullet.Velocity[1] = player.Dir[1] * speedMs
 
 	return bullet
 }

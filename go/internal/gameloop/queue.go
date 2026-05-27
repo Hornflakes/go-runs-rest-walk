@@ -11,21 +11,21 @@ type QueueMessage struct {
 	Message server.Message
 }
 
-type GameQueue struct {
+type Queue struct {
 	messages []*QueueMessage
 	killChan chan struct{}
 	mutex    sync.Mutex
 }
 
-func NewGameQueue() *GameQueue {
-	return &GameQueue{
+func NewQueue() *Queue {
+	return &Queue{
 		messages: make([]*QueueMessage, 0),
 		killChan: make(chan struct{}),
 		mutex:    sync.Mutex{},
 	}
 }
 
-func (q *GameQueue) Start(s1, s2 server.Socket) {
+func (q *Queue) Start(s1, s2 server.Socket) {
 	for {
 		select {
 		case msg := <-s1.In():
@@ -48,11 +48,11 @@ func (q *GameQueue) Start(s1, s2 server.Socket) {
 	}
 }
 
-func (q *GameQueue) Stop() {
+func (q *Queue) Stop() {
 	q.killChan <- struct{}{}
 }
 
-func (q *GameQueue) empty() bool {
+func (q *Queue) empty() bool {
 	ret := true
 	for _, msg := range q.messages {
 		ret = ret && msg == nil
@@ -63,7 +63,7 @@ func (q *GameQueue) empty() bool {
 	return ret
 }
 
-func (q *GameQueue) Flush() []*QueueMessage {
+func (q *Queue) Flush() []*QueueMessage {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 

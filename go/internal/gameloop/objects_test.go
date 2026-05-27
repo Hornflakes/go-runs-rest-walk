@@ -2,9 +2,29 @@ package gameloop_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hornflakes/go-runs-rest-walk/internal/gameloop"
 )
+
+func TestPlayerFire(t *testing.T) {
+	pos := gameloop.Vector2D{0, 0}
+	dir := gameloop.Vector2D{1, 0}
+	fireRate := int64(128)
+	player := gameloop.NewPlayer(pos, dir, fireRate)
+
+	if got := player.Fire(); got != true {
+		t.Fatalf("first player.Fire() = %t, want true", got)
+	}
+	if got := player.Fire(); got != false {
+		t.Errorf("instant second player.Fire() = %t, want false", got)
+	}
+
+	time.Sleep((128 + 1) * time.Millisecond)
+	if got := player.Fire(); got != true {
+		t.Errorf("after cooldown player.Fire() = %t, want true", got)
+	}
+}
 
 func TestCreateBulletFromPlayer(t *testing.T) {
 	pos := gameloop.Vector2D{0, 0}
@@ -17,7 +37,7 @@ func TestCreateBulletFromPlayer(t *testing.T) {
 		t.Errorf("expected bullet to be on the positive side of the player")
 	}
 	if bullet.Velocity[0] != 64 {
-		t.Errorf("got %f, want %f velocity", bullet.Velocity[0], 64.0)
+		t.Errorf("bullet.Velocity[0] = %f, want %f", bullet.Velocity[0], 64.0)
 	}
 
 	player.Dir[0] = -1
@@ -27,6 +47,6 @@ func TestCreateBulletFromPlayer(t *testing.T) {
 		t.Errorf("expected bullet to be on the negative side of the player")
 	}
 	if bullet.Velocity[0] != -36 {
-		t.Errorf("got %f, want %f velocity", bullet.Velocity[0], -36.0)
+		t.Errorf("got %f, want %f", bullet.Velocity[0], -36.0)
 	}
 }
