@@ -73,7 +73,7 @@ func main() {
 
 		case server.GameOver:
 			playing.Store(false)
-			log.Printf("%s", color.GreenString("game over"))
+			log.Printf("%s | %s", color.GreenString("game over"), msg.Msg)
 			return
 		}
 	}

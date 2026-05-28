@@ -6,6 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
+	"github.com/hornflakes/go-runs-rest-walk/internal/stats"
 )
 
 type Game struct {
@@ -13,13 +14,14 @@ type Game struct {
 	queue   *Queue
 	players [2]*Player
 	bullets []*Bullet
+	stats   *stats.GameFrameStats
 }
 
 func NewGame(s1, s2 server.Socket) *Game {
 	return &Game{sockets: [2]server.Socket{s1, s2}, players: [2]*Player{
 		NewPlayer(Vector2D{1024, 0}, Vector2D{-1, 0}, 128),
 		NewPlayer(Vector2D{-1024, 0}, Vector2D{1, 0}, 256),
-	}}
+	}, stats: stats.NewGameFrameStats()}
 }
 
 func (g *Game) start() {
@@ -50,8 +52,8 @@ func (g *Game) updateStateFromMessageQueue() {
 	}
 }
 
-func (g *Game) updateBulletsPositions(delta int64) {
-	deltaMs := float64(delta) / 1000
+func (g *Game) updateBulletsPositions(deltaTime int64) {
+	deltaMs := float64(deltaTime) / 1000
 	for _, bullet := range g.bullets {
 		bullet.Rect.X += deltaMs * bullet.Velocity[0]
 		bullet.Rect.Y += deltaMs * bullet.Velocity[1]
@@ -97,20 +99,29 @@ func (g *Game) getOtherPlayer(player *Player) *Player {
 }
 
 func (g *Game) Run() {
-	g.sockets[0].Out() <- server.CreateSocketMessage(server.GameOn)
-	g.sockets[1].Out() <- server.CreateSocketMessage(server.GameOn)
-
 	g.start()
 	defer g.stop()
 
+	stats.AddActiveGame()
+	defer stats.RemoveActiveGame()
+
+	g.sockets[0].Out() <- server.CreateSocketMessage(server.GameOn)
+	g.sockets[1].Out() <- server.CreateSocketMessage(server.GameOn)
+
 	ticks := 0
 	tickStartTime := time.Now()
+
 	lastLoopTime := time.Now().UnixMicro()
 
 	for {
 		ticks++
+
 		startTime := time.Now().UnixMicro()
 		deltaTime := startTime - lastLoopTime
+
+		if ticks > 1 {
+			g.stats.AddDeltaTime(deltaTime)
+		}
 
 		g.updateStateFromMessageQueue()
 		g.updateBulletsPositions(deltaTime)
@@ -122,8 +133,8 @@ func (g *Game) Run() {
 			winnerSocket := g.getPlayerSocket(winner)
 			loserSocket := g.getPlayerSocket(loser)
 
-			winnerSocket.Out() <- server.CreateSocketMessage(server.GameOver)
-			loserSocket.Out() <- server.CreateSocketMessage(server.GameOver)
+			winnerSocket.Out() <- server.CreateWinnerMessage(g.stats)
+			loserSocket.Out() <- server.CreateLoserMessage()
 			break
 		}
 
@@ -135,5 +146,5 @@ func (g *Game) Run() {
 		lastLoopTime = startTime
 	}
 
-	log.Printf("%s | ticks=%d elapsed=%v bullets=%d", color.GreenString("game over"), ticks, time.Since(tickStartTime), len(g.bullets))
+	log.Printf("%s | ticks=%d elapsed=%v bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, time.Since(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
 }

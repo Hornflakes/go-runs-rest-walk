@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/gorilla/websocket"
+	"github.com/hornflakes/go-runs-rest-walk/internal/stats"
 )
 
 const (
@@ -56,6 +58,26 @@ func CreateSocketMessage(msgType int) SocketMessage {
 		Message: Message{
 			Type: msgType,
 			Msg:  "",
+		},
+	}
+}
+
+func CreateWinnerMessage(gameFrameStats *stats.GameFrameStats) SocketMessage {
+	return SocketMessage{
+		Type: websocket.TextMessage,
+		Message: Message{
+			Type: GameOver,
+			Msg:  fmt.Sprintf("winner(%d)->%s", stats.ActiveGames, gameFrameStats),
+		},
+	}
+}
+
+func CreateLoserMessage() SocketMessage {
+	return SocketMessage{
+		Type: websocket.TextMessage,
+		Message: Message{
+			Type: GameOver,
+			Msg:  "loser",
 		},
 	}
 }
