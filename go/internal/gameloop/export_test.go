@@ -10,6 +10,9 @@ func GamePlayers(game *Game) [2]*Player {
 	return game.players
 }
 
+var NewGameWithClock = newGameWithClock
+var NewPlayerWithClock = newPlayerWithClock
+
 var GameStart = (*Game).start
 var GameStop = (*Game).stop
 var GameUpdateStateFromMessageQueue = (*Game).updateStateFromMessageQueue

@@ -1,12 +1,11 @@
 package gameloop
 
-import "time"
-
 type Player struct {
 	Rect         Rect
 	Dir          Vector2D
 	FireRate     int64
 	lastFireTime int64
+	clock        Clock
 }
 
 const (
@@ -16,7 +15,7 @@ const (
 	BulletHeight = 2
 )
 
-func NewPlayer(pos, dir Vector2D, fireRate int64) *Player {
+func newPlayerWithClock(pos, dir Vector2D, fireRate int64, clock Clock) *Player {
 	return &Player{
 		Rect: Rect{
 			X:      pos[0],
@@ -27,11 +26,16 @@ func NewPlayer(pos, dir Vector2D, fireRate int64) *Player {
 		Dir:          dir,
 		FireRate:     fireRate,
 		lastFireTime: 0,
+		clock:        clock,
 	}
 }
 
+func NewPlayer(pos, dir Vector2D, fireRate int64) *Player {
+	return newPlayerWithClock(pos, dir, fireRate, &RealClock{})
+}
+
 func (p *Player) Fire() bool {
-	now := time.Now().UnixMilli()
+	now := p.clock.Now().UnixMilli()
 
 	if p.FireRate > now-p.lastFireTime {
 		return false

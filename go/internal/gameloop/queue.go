@@ -25,17 +25,17 @@ func NewQueue() *Queue {
 	}
 }
 
-func (q *Queue) Start(s1, s2 server.Socket) {
+func (q *Queue) Start(s0, s1 server.Socket) {
 	for {
 		select {
-		case msg := <-s1.In():
+		case msg := <-s0.In():
 			q.mutex.Lock()
 			q.messages = append(q.messages, &QueueMessage{
 				1,
 				msg.Message,
 			})
 			q.mutex.Unlock()
-		case msg := <-s2.In():
+		case msg := <-s1.In():
 			q.mutex.Lock()
 			q.messages = append(q.messages, &QueueMessage{
 				2,

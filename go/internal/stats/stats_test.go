@@ -9,8 +9,9 @@ func TestGameFrameStatsString(t *testing.T) {
 	gfs.AddDeltaTime(16_100)
 	gfs.AddDeltaTime(18_000)
 
-	if got := gfs.String(); got != "1,1,0,0,0,0,0,0" {
-		t.Errorf("got %q, want %q", got, "1,1,0,0,0,0,0,0")
+	want := "1,1,0,0,0,0,0,0"
+	if got := gfs.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -25,7 +26,8 @@ func TestGameFrameStatsAddDeltaTime(t *testing.T) {
 	gfs.AddDeltaTime(31_000)
 	gfs.AddDeltaTime(41_000)
 
-	if got := gfs.String(); got != "1,1,1,1,1,1,1,1" {
-		t.Errorf("got %q, want %q", got, "1,1,1,1,1,1,1,1")
+	want := "1,1,1,1,1,1,1,1"
+	if got := gfs.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -14,14 +14,21 @@ type Game struct {
 	queue   *Queue
 	players [2]*Player
 	bullets []*Bullet
+	clock   Clock
 	stats   *stats.GameFrameStats
 }
 
-func NewGame(s1, s2 server.Socket) *Game {
-	return &Game{sockets: [2]server.Socket{s1, s2}, players: [2]*Player{
-		NewPlayer(Vector2D{1024, 0}, Vector2D{-1, 0}, 128),
-		NewPlayer(Vector2D{-1024, 0}, Vector2D{1, 0}, 256),
-	}, stats: stats.NewGameFrameStats()}
+func newGameWithClock(s0, s1 server.Socket, clock Clock) *Game {
+	return &Game{sockets: [2]server.Socket{s0, s1}, players: [2]*Player{
+		newPlayerWithClock(Vector2D{1024, 0}, Vector2D{-1, 0}, 128, clock),
+		newPlayerWithClock(Vector2D{-1024, 0}, Vector2D{1, 0}, 256, clock),
+	},
+		clock: clock,
+		stats: stats.NewGameFrameStats()}
+}
+
+func NewGame(s0, s1 server.Socket) *Game {
+	return newGameWithClock(s0, s1, &RealClock{})
 }
 
 func (g *Game) start() {
@@ -109,14 +116,14 @@ func (g *Game) Run() {
 	g.sockets[1].Out() <- server.CreateSocketMessage(server.GameOn)
 
 	ticks := 0
-	tickStartTime := time.Now()
+	tickStartTime := g.clock.Now()
 
-	lastLoopTime := time.Now().UnixMicro()
+	lastLoopTime := g.clock.Now().UnixMicro()
 
 	for {
 		ticks++
 
-		startTime := time.Now().UnixMicro()
+		startTime := g.clock.Now().UnixMicro()
 		deltaTime := startTime - lastLoopTime
 
 		if ticks > 1 {
@@ -138,7 +145,7 @@ func (g *Game) Run() {
 			break
 		}
 
-		nowTime := time.Now().UnixMicro()
+		nowTime := g.clock.Now().UnixMicro()
 		sleepUs := 16_000 - (nowTime - startTime)
 		if sleepUs > 0 {
 			time.Sleep(time.Duration(sleepUs) * time.Microsecond)
@@ -146,5 +153,5 @@ func (g *Game) Run() {
 		lastLoopTime = startTime
 	}
 
-	log.Printf("%s | ticks=%d elapsed=%v bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, time.Since(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
+	log.Printf("%s | ticks=%d elapsed=%v bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, g.clock.Now().Sub(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
 }

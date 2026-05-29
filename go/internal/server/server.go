@@ -26,13 +26,7 @@ func NewServer() *Server {
 	return &server
 }
 
-func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
-	socket, err := NewSocket(w, r)
-	if err != nil {
-		log.Printf("%s | %v", color.RedString("websocket upgrade failed"), err)
-		return
-	}
-
+func (s *Server) registerSocket(socket Socket) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -42,4 +36,13 @@ func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
 	} else {
 		s.waitingSocket = socket
 	}
+}
+
+func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
+	socket, err := NewSocket(w, r)
+	if err != nil {
+		log.Printf("%s | %v", color.RedString("websocket upgrade failed"), err)
+		return
+	}
+	s.registerSocket(socket)
 }

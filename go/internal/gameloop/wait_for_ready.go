@@ -6,15 +6,15 @@ import (
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-func sendAndWait(s1, s2 server.Socket) <-chan bool {
+func sendAndWait(s0, s1 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
+		s0.Out() <- server.CreateSocketMessage(server.Ready)
 		s1.Out() <- server.CreateSocketMessage(server.Ready)
-		s2.Out() <- server.CreateSocketMessage(server.Ready)
 
-		in1 := s1.In()
-		in2 := s2.In()
+		in1 := s0.In()
+		in2 := s1.In()
 		count := 0
 		success := true
 
@@ -55,14 +55,14 @@ func sendAndWait(s1, s2 server.Socket) <-chan bool {
 	return ready
 }
 
-func WaitForReady(s1, s2 server.Socket) <-chan bool {
+func WaitForReady(s0, s1 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
 		defer close(ready)
 
 		select {
-		case ok := <-sendAndWait(s1, s2):
+		case ok := <-sendAndWait(s0, s1):
 			ready <- ok
 		case <-time.After(30 * time.Second):
 			ready <- false

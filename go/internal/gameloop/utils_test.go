@@ -1,6 +1,8 @@
 package gameloop_test
 
 import (
+	"time"
+
 	"github.com/hornflakes/go-runs-rest-walk/internal/gameloop"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
@@ -26,11 +28,13 @@ func newTestSocket() *testSocket {
 	}
 }
 
-func newGameAndSockets() (*gameloop.Game, [2]*testSocket) {
+func newGameAndSockets() (*gameloop.Game, [2]*testSocket, *gameloop.SyntheticClock) {
+	clock := &gameloop.SyntheticClock{}
+	clock.SetNow(time.Unix(1, 0))
 	sockets := [2]*testSocket{
 		newTestSocket(),
 		newTestSocket(),
 	}
-	game := gameloop.NewGame(sockets[0], sockets[1])
-	return game, sockets
+	game := gameloop.NewGameWithClock(sockets[0], sockets[1], clock)
+	return game, sockets, clock
 }
