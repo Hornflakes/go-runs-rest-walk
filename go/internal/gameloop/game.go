@@ -1,10 +1,10 @@
 package gameloop
 
 import (
-	"log"
+	"fmt"
 	"time"
 
-	"github.com/fatih/color"
+	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 	"github.com/hornflakes/go-runs-rest-walk/internal/stats"
 )
@@ -42,7 +42,7 @@ func (g *Game) stop() {
 	}
 }
 
-func (g *Game) updateStateFromMessageQueue() {
+func (g *Game) updateStateFromMessageQueue(log *logger.Logger) {
 	messages := g.queue.Flush()
 	for _, message := range messages {
 		if message.Message.Type == server.Shoot {
@@ -53,7 +53,9 @@ func (g *Game) updateStateFromMessageQueue() {
 				bullet := CreateBulletFromPlayer(player, BulletSpeedMs)
 				g.bullets = append(g.bullets, &bullet)
 
-				log.Printf("%s | player=%d bullet=%d", color.CyanString("player shot"), message.From, len(g.bullets))
+				log.Info("player shot", fmt.Sprintf("%s bullet=%d",
+					logger.Player(g.sockets[message.From-1].PlayerId()),
+					len(g.bullets)))
 			}
 		}
 	}
@@ -112,9 +114,14 @@ func (g *Game) Run() {
 	stats.AddActiveGame()
 	defer stats.RemoveActiveGame()
 
+	log := logger.ForPair(g.sockets[0].PlayerId(), g.sockets[1].PlayerId())
+
 	g.sockets[0].Out() <- server.CreateSocketMessage(server.GameOn)
 	g.sockets[1].Out() <- server.CreateSocketMessage(server.GameOn)
 
+	log.Info("game on", "")
+
+	var winnerId uint64
 	ticks := 0
 	tickStartTime := g.clock.Now()
 
@@ -130,7 +137,7 @@ func (g *Game) Run() {
 			g.stats.AddDeltaTime(deltaTime)
 		}
 
-		g.updateStateFromMessageQueue()
+		g.updateStateFromMessageQueue(log)
 		g.updateBulletsPositions(deltaTime)
 		g.checkBulletBulletCollisions()
 
@@ -139,15 +146,18 @@ func (g *Game) Run() {
 			winner := g.getOtherPlayer(loser)
 			winnerSocket := g.getPlayerSocket(winner)
 			loserSocket := g.getPlayerSocket(loser)
+			winnerId = winnerSocket.PlayerId()
 
 			winnerSocket.Out() <- server.CreateWinnerMessage(g.stats)
 			loserSocket.Out() <- server.CreateLoserMessage()
 
 			if err := winnerSocket.Close(); err != nil {
-				log.Printf("%s | addr=%s %v", color.YellowString("websocket close failed"), winnerSocket.RemoteAddr(), err)
+				log.Warn("websocket close failed",
+					fmt.Sprintf("%s err=%v", logger.Player(winnerSocket.PlayerId()), err))
 			}
 			if err := loserSocket.Close(); err != nil {
-				log.Printf("%s | addr=%s %v", color.YellowString("websocket close failed"), loserSocket.RemoteAddr(), err)
+				log.Warn("websocket close failed",
+					fmt.Sprintf("%s err=%v", logger.Player(loserSocket.PlayerId()), err))
 			}
 
 			break
@@ -161,5 +171,12 @@ func (g *Game) Run() {
 		lastLoopTime = startTime
 	}
 
-	log.Printf("%s | ticks=%d elapsed=%s bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, g.clock.Now().Sub(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
+	log.Milestone("game over", fmt.Sprintf(
+		"winner=%d ticks=%d elapsed=%s bullets=%d histogram=%s",
+		winnerId,
+		ticks,
+		g.clock.Now().Sub(tickStartTime),
+		len(g.bullets),
+		g.stats,
+	))
 }

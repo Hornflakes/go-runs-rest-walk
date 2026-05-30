@@ -35,8 +35,8 @@ func testMessages(t *testing.T, queue *gameloop.Queue, froms []uint) {
 
 func TestQueue(t *testing.T) {
 	queue := gameloop.NewQueue()
-	s0 := newTestSocket()
-	s1 := newTestSocket()
+	s0 := newTestSocket(1)
+	s1 := newTestSocket(2)
 
 	go queue.Start(s0, s1)
 	defer queue.Stop()
@@ -71,8 +71,8 @@ func TestQueue(t *testing.T) {
 
 func TestQueueStop(t *testing.T) {
 	queue := gameloop.NewQueue()
-	s0 := newTestSocket()
-	s1 := newTestSocket()
+	s0 := newTestSocket(1)
+	s1 := newTestSocket(2)
 
 	done := make(chan struct{})
 

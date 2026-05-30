@@ -10,8 +10,8 @@ func sendAndWait(s0, s1 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
-		s0.Out() <- server.CreateSocketMessage(server.Ready)
-		s1.Out() <- server.CreateSocketMessage(server.Ready)
+		s0.Out() <- server.CreateReadyMessage(s1.PlayerId())
+		s1.Out() <- server.CreateReadyMessage(s0.PlayerId())
 
 		in1 := s0.In()
 		in2 := s1.In()

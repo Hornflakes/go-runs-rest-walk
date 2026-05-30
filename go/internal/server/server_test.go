@@ -3,10 +3,13 @@ package server
 import "testing"
 
 type testSocket struct {
+	playerId   uint64
 	remoteAddr string
 	closed     bool
 }
 
+func (s *testSocket) PlayerId() uint64          { return s.playerId }
+func (s *testSocket) setPlayerId(id uint64)     { s.playerId = id }
 func (s *testSocket) RemoteAddr() string        { return s.remoteAddr }
 func (s *testSocket) In() <-chan SocketMessage  { return nil }
 func (f *testSocket) Out() chan<- SocketMessage { return make(chan SocketMessage, 1) }
@@ -23,6 +26,10 @@ func TestRegisterSocket(t *testing.T) {
 
 	srv.registerSocket(s0)
 
+	if got, want := s0.PlayerId(), uint64(1); got != want {
+		t.Errorf("s0.PlayerId() = %d, want %d", got, want)
+	}
+
 	select {
 	case <-srv.out:
 		t.Fatal("got unexpected lonely pair")
@@ -31,9 +38,13 @@ func TestRegisterSocket(t *testing.T) {
 
 	srv.registerSocket(s1)
 
+	if got, want := s1.PlayerId(), uint64(2); got != want {
+		t.Errorf("s1.PlayerId() = %d, want %d", got, want)
+	}
+
 	pair := <-srv.out
 	if pair[0] != s0 || pair[1] != s1 {
-		t.Errorf("got %s and %s, want bar then baz", pair[0].RemoteAddr(), pair[1].RemoteAddr())
+		t.Errorf("got %s and %s, want foo then bar", pair[0].RemoteAddr(), pair[1].RemoteAddr())
 	}
 }
 

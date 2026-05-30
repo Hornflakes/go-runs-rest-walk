@@ -2,16 +2,27 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
+	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-var playing atomic.Bool
+var (
+	playing  atomic.Bool
+	playerId uint64
+	enemyId  uint64
+	pairLog  *logger.Logger
+)
+
+func parseReadyMessage(msg string) (enemyId uint64) {
+	fmt.Sscanf(msg, "enemyId=%d", &enemyId)
+	return enemyId
+}
 
 func main() {
 	url := "ws://127.0.0.1:37373/"
@@ -25,32 +36,50 @@ func main() {
 	for {
 		_, data, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("%s | %v", color.YellowString("websocket read ended"), err)
+			logger.Warn("websocket read ended", fmt.Sprintf("addr=%s err=%v", conn.LocalAddr(), err))
 			return
 		}
 
 		msg, err := server.UnmarshalMessage(data)
 		if err != nil {
-			log.Printf("%s | %v", color.MagentaString("websocket message unmarshal failed"), err)
+			logger.SoftError("websocket message unmarshal failed", fmt.Sprintf("addr=%s err=%v", conn.LocalAddr(), err))
 			continue
 		}
 
 		switch msg.Type {
+		case server.Hello:
+			fmt.Sscanf(msg.Msg, "%d", &playerId)
+			logger.Info(
+				"websocket connected",
+				logger.PlayerWithAddr(playerId, conn.LocalAddr().String()),
+			)
+
 		case server.Ready:
+			if pairLog == nil {
+				enemyId = parseReadyMessage(msg.Msg)
+				id0, id1 := playerId, enemyId
+				if id0 > id1 {
+					id0, id1 = id1, id0
+				}
+				pairLog = logger.ForPair(id0, id1)
+			}
+
 			reply, err := json.Marshal(server.CreateMessage(server.Ready))
 			if err != nil {
-				log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
+				pairLog.SoftError("websocket message marshal failed", fmt.Sprintf("err=%v", err))
 				continue
 			}
 
 			if err := conn.WriteMessage(websocket.TextMessage, reply); err != nil {
-				log.Printf("%s | %v", color.RedString("websocket message write failed"), err)
+				pairLog.HardError("websocket message write failed", fmt.Sprintf("err=%v", err))
 				return
 			}
-			log.Printf("%s", color.GreenString("websocket wrote ready"))
+
+			pairLog.Milestone("websocket wrote ready", fmt.Sprintf("player=%d enemy=%d", playerId, enemyId))
 
 		case server.GameOn:
-			log.Printf("%s", color.CyanString("game on"))
+			pairLog.Info("game on", "")
+
 			playing.Store(true)
 
 			go func() {
@@ -63,12 +92,12 @@ func main() {
 
 					reply, err := json.Marshal(server.CreateMessage(server.Shoot))
 					if err != nil {
-						log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
+						pairLog.SoftError("websocket message marshal failed", fmt.Sprintf("err=%v", err))
 						continue
 					}
 
 					if err := conn.WriteMessage(websocket.TextMessage, reply); err != nil {
-						log.Printf("%s | %v", color.RedString("websocket message write failed"), err)
+						pairLog.HardError("websocket message write failed", fmt.Sprintf("err=%v", err))
 						return
 					}
 				}
@@ -76,12 +105,13 @@ func main() {
 
 		case server.GameOver:
 			playing.Store(false)
-			log.Printf("%s | %s", color.GreenString("game over"), msg.Msg)
+
+			pairLog.Milestone("game over", msg.Msg)
 
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 			deadline := time.Now().Add(time.Second)
 			if err := conn.WriteControl(websocket.CloseMessage, closeMsg, deadline); err != nil {
-				log.Printf("%s | %v", color.YellowString("websocket close failed"), err)
+				pairLog.Warn("websocket close failed", fmt.Sprintf("err=%v", err))
 			}
 
 			return

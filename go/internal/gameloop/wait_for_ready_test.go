@@ -9,8 +9,8 @@ import (
 )
 
 func TestWaitForReady(t *testing.T) {
-	s0 := newTestSocket()
-	s1 := newTestSocket()
+	s0 := newTestSocket(1)
+	s1 := newTestSocket(2)
 
 	done := gameloop.WaitForReady(s0, s1)
 
@@ -23,6 +23,15 @@ func TestWaitForReady(t *testing.T) {
 	}
 	if got := msg1.Message.Type; got != want {
 		t.Errorf("s1 out Type = %d, want %d", got, want)
+	}
+
+	wantMsg := "enemyId=2"
+	if msg0.Message.Msg != wantMsg {
+		t.Errorf("s0 Msg = %q, want %q", msg0.Message.Msg, wantMsg)
+	}
+	wantMsg = "enemyId=1"
+	if msg1.Message.Msg != wantMsg {
+		t.Errorf("s1 Msg = %q, want %q", msg1.Message.Msg, wantMsg)
 	}
 
 	ready := server.CreateSocketMessage(server.Ready)

@@ -2,32 +2,42 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
-	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
+	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 )
 
 var upgrader = websocket.Upgrader{}
 
 type Socket interface {
 	RemoteAddr() string
+	PlayerId() uint64
 	In() <-chan SocketMessage
 	Out() chan<- SocketMessage
 	Closed() bool
 	Close() error
 }
 
+type playerIdSetter interface {
+	setPlayerId(uint64)
+}
+
 type socketImpl struct {
 	conn      *websocket.Conn
+	playerId  uint64
 	in        chan SocketMessage
 	out       chan SocketMessage
 	done      chan struct{}
 	closeOnce sync.Once
 	closed    bool
 }
+
+func (s *socketImpl) PlayerId() uint64      { return s.playerId }
+func (s *socketImpl) setPlayerId(id uint64) { s.playerId = id }
 
 func (s *socketImpl) RemoteAddr() string {
 	return s.conn.RemoteAddr().String()
@@ -58,6 +68,17 @@ func (s *socketImpl) Close() error {
 	return err
 }
 
+func (s *socketImpl) logDetail(err error) string {
+	return fmt.Sprintf("%s err=%v", logger.PlayerWithAddr(s.playerId, s.RemoteAddr()), err)
+}
+
+func normalReadEnd(err error) bool {
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+		return true
+	}
+	return strings.Contains(err.Error(), "use of closed network connection")
+}
+
 func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -75,7 +96,9 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 		for {
 			mt, payload, err := socket.conn.ReadMessage()
 			if err != nil {
-				log.Printf("%s | %v", color.YellowString("websocket read ended"), err)
+				if !normalReadEnd(err) {
+					logger.Warn("websocket read ended", socket.logDetail(err))
+				}
 				break
 			}
 
@@ -85,7 +108,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 
 			msg, err := fromSocket(payload)
 			if err != nil {
-				log.Printf("%s | %v", color.MagentaString("websocket message unmarshal failed"), err)
+				logger.SoftError("websocket message unmarshal failed", socket.logDetail(err))
 				continue
 			}
 
@@ -101,13 +124,13 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 		for msg := range socket.out {
 			bytes, err := json.Marshal(msg.Message)
 			if err != nil {
-				log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
+				logger.SoftError("websocket message marshal failed", socket.logDetail(err))
 				continue
 			}
 
 			err = socket.conn.WriteMessage(msg.Type, bytes)
 			if err != nil {
-				log.Printf("%s | %v", color.RedString("websocket message write failed"), err)
+				logger.HardError("websocket message write failed", socket.logDetail(err))
 				break
 			}
 		}

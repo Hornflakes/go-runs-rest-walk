@@ -5,8 +5,11 @@ import (
 	"time"
 
 	"github.com/hornflakes/go-runs-rest-walk/internal/gameloop"
+	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
+
+var log = logger.ForPair(1, 2)
 
 func startGame(t *testing.T) (*gameloop.Game, [2]*testSocket, *gameloop.Queue) {
 	t.Helper()
@@ -52,7 +55,7 @@ func TestGameUpdateStateFromMessageQueue(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	want := 2
 	if got := len(gameloop.GameBullets(game)); got != want {
@@ -68,12 +71,12 @@ func TestGameUpdateStateFromMessageQueueRateLimit(t *testing.T) {
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	want := 1
 	if got := len(gameloop.GameBullets(game)); got != want {
@@ -92,7 +95,7 @@ func TestGameUpdateBulletsPositions(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	want := 2
 	if got := len(gameloop.GameBullets(game)); got != want {
@@ -133,7 +136,7 @@ func TestGameCheckBulletBulletCollisions(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	want := 2
 	if got := len(gameloop.GameBullets(game)); got != want {
@@ -164,7 +167,7 @@ func TestGameCheckBulletPlayerCollisions(t *testing.T) {
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game)
+	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
 	want := 1
 	if got := len(gameloop.GameBullets(game)); got != want {

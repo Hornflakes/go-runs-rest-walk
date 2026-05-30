@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	Ready int = iota
+	Hello int = iota
+	Ready
 	GameOn
 	Shoot
 	GameOver
@@ -58,6 +59,26 @@ func CreateSocketMessage(msgType int) SocketMessage {
 		Message: Message{
 			Type: msgType,
 			Msg:  "",
+		},
+	}
+}
+
+func CreateHelloMessage(playerId uint64) SocketMessage {
+	return SocketMessage{
+		Type: websocket.TextMessage,
+		Message: Message{
+			Type: Hello,
+			Msg:  fmt.Sprintf("%d", playerId),
+		},
+	}
+}
+
+func CreateReadyMessage(enemyId uint64) SocketMessage {
+	return SocketMessage{
+		Type: websocket.TextMessage,
+		Message: Message{
+			Type: Ready,
+			Msg:  fmt.Sprintf("enemyId=%d", enemyId),
 		},
 	}
 }

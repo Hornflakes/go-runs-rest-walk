@@ -8,12 +8,14 @@ import (
 )
 
 type testSocket struct {
+	playerId   uint64
 	remoteAddr string
 	in         chan server.SocketMessage
 	out        chan server.SocketMessage
 	closed     bool
 }
 
+func (s *testSocket) PlayerId() uint64                 { return s.playerId }
 func (s *testSocket) RemoteAddr() string               { return s.remoteAddr }
 func (s *testSocket) In() <-chan server.SocketMessage  { return s.in }
 func (s *testSocket) Out() chan<- server.SocketMessage { return s.out }
@@ -23,8 +25,9 @@ func (s *testSocket) Close() error {
 	return nil
 }
 
-func newTestSocket() *testSocket {
+func newTestSocket(id uint64) *testSocket {
 	return &testSocket{
+		playerId:   id,
 		remoteAddr: "foo",
 		in:         make(chan server.SocketMessage, 1),
 		out:        make(chan server.SocketMessage, 1),
@@ -36,8 +39,8 @@ func newGameAndSockets() (*gameloop.Game, [2]*testSocket) {
 	clock := &gameloop.SyntheticClock{}
 	clock.SetNow(time.Unix(1, 0))
 	sockets := [2]*testSocket{
-		newTestSocket(),
-		newTestSocket(),
+		newTestSocket(1),
+		newTestSocket(2),
 	}
 	game := gameloop.NewGameWithClock(sockets[0], sockets[1], clock)
 	return game, sockets
