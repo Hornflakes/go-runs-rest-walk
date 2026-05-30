@@ -1,0 +1,32 @@
+package gameloop
+
+import "time"
+
+const (
+	PlayerWidth  = 64
+	PlayerHeight = 64
+	BulletWidth  = 8
+	BulletHeight = 2
+)
+
+const (
+	Player0SpawnX     = 1024
+	Player1SpawnX     = -1024
+	Player0FireRateMs = 128
+	Player1FireRateMs = 256
+)
+
+var (
+	Player0Spawn = Vector2D{Player0SpawnX, 0}
+	Player1Spawn = Vector2D{Player1SpawnX, 0}
+	Player0Dir   = Vector2D{-1, 0}
+	Player1Dir   = Vector2D{1, 0}
+)
+
+const (
+	BulletSpeedMs    = 1.0
+	TickTargetMicros = 16_000
+	MicrosPerMs      = 1000
+)
+
+const ReadyTimeoutS = 30 * time.Second

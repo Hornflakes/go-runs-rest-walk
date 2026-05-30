@@ -8,13 +8,6 @@ type Player struct {
 	clock        Clock
 }
 
-const (
-	PlayerWidth  = 64
-	PlayerHeight = 64
-	BulletWidth  = 8
-	BulletHeight = 2
-)
-
 func newPlayerWithClock(pos, dir Vector2D, fireRate int64, clock Clock) *Player {
 	return &Player{
 		Rect: Rect{

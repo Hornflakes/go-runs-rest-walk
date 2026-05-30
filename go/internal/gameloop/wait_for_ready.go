@@ -64,7 +64,7 @@ func WaitForReady(s0, s1 server.Socket) <-chan bool {
 		select {
 		case ok := <-sendAndWait(s0, s1):
 			ready <- ok
-		case <-time.After(30 * time.Second):
+		case <-time.After(ReadyTimeoutS):
 			ready <- false
 		}
 	}()

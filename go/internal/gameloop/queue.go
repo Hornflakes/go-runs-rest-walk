@@ -14,7 +14,7 @@ type QueueMessage struct {
 type Queue struct {
 	messages []*QueueMessage
 	ack      chan struct{}
-	kill     chan struct{}
+	stop     chan struct{}
 	mutex    sync.Mutex
 }
 
@@ -22,7 +22,7 @@ func NewQueue() *Queue {
 	return &Queue{
 		messages: make([]*QueueMessage, 0),
 		ack:      make(chan struct{}, 1),
-		kill:     make(chan struct{}),
+		stop:     make(chan struct{}),
 		mutex:    sync.Mutex{},
 	}
 }
@@ -56,14 +56,14 @@ func (q *Queue) Start(s0, s1 server.Socket) {
 			default:
 			}
 
-		case <-q.kill:
+		case <-q.stop:
 			return
 		}
 	}
 }
 
 func (q *Queue) Stop() {
-	q.kill <- struct{}{}
+	q.stop <- struct{}{}
 }
 
 func (q *Queue) empty() bool {

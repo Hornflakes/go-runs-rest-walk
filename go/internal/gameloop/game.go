@@ -20,8 +20,8 @@ type Game struct {
 
 func newGameWithClock(s0, s1 server.Socket, clock Clock) *Game {
 	return &Game{sockets: [2]server.Socket{s0, s1}, players: [2]*Player{
-		newPlayerWithClock(Vector2D{1024, 0}, Vector2D{-1, 0}, 128, clock),
-		newPlayerWithClock(Vector2D{-1024, 0}, Vector2D{1, 0}, 256, clock),
+		newPlayerWithClock(Player0Spawn, Player0Dir, Player0FireRateMs, clock),
+		newPlayerWithClock(Player1Spawn, Player1Dir, Player1FireRateMs, clock),
 	},
 		clock: clock,
 		stats: stats.NewGameFrameStats()}
@@ -50,7 +50,7 @@ func (g *Game) updateStateFromMessageQueue() {
 			fired := player.Fire()
 
 			if fired {
-				bullet := CreateBulletFromPlayer(player, 1.0)
+				bullet := CreateBulletFromPlayer(player, BulletSpeedMs)
 				g.bullets = append(g.bullets, &bullet)
 
 				log.Printf("%s | player=%d bullet=%d", color.CyanString("player shot"), message.From, len(g.bullets))
@@ -60,7 +60,7 @@ func (g *Game) updateStateFromMessageQueue() {
 }
 
 func (g *Game) updateBulletsPositions(deltaTime int64) {
-	deltaMs := float64(deltaTime) / 1000
+	deltaMs := float64(deltaTime) / MicrosPerMs
 	for _, bullet := range g.bullets {
 		bullet.Rect.X += deltaMs * bullet.Velocity[0]
 		bullet.Rect.Y += deltaMs * bullet.Velocity[1]
@@ -142,11 +142,19 @@ func (g *Game) Run() {
 
 			winnerSocket.Out() <- server.CreateWinnerMessage(g.stats)
 			loserSocket.Out() <- server.CreateLoserMessage()
+
+			if err := winnerSocket.Close(); err != nil {
+				log.Printf("%s | addr=%s %v", color.YellowString("websocket close failed"), winnerSocket.RemoteAddr(), err)
+			}
+			if err := loserSocket.Close(); err != nil {
+				log.Printf("%s | addr=%s %v", color.YellowString("websocket close failed"), loserSocket.RemoteAddr(), err)
+			}
+
 			break
 		}
 
 		nowTime := g.clock.Now().UnixMicro()
-		sleepUs := 16_000 - (nowTime - startTime)
+		sleepUs := TickTargetMicros - (nowTime - startTime)
 		if sleepUs > 0 {
 			time.Sleep(time.Duration(sleepUs) * time.Microsecond)
 		}

@@ -10,7 +10,7 @@ import (
 func TestPlayerFire(t *testing.T) {
 	pos := gameloop.Vector2D{0, 0}
 	dir := gameloop.Vector2D{1, 0}
-	fireRate := int64(128)
+	fireRate := int64(gameloop.Player0FireRateMs)
 
 	clock := &gameloop.SyntheticClock{}
 	t0 := time.Unix(1, 0)

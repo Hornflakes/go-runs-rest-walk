@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
@@ -16,13 +17,16 @@ type Socket interface {
 	In() <-chan SocketMessage
 	Out() chan<- SocketMessage
 	Closed() bool
+	Close() error
 }
 
 type socketImpl struct {
-	conn   *websocket.Conn
-	in     <-chan SocketMessage
-	out    chan<- SocketMessage
-	closed bool
+	conn      *websocket.Conn
+	in        chan SocketMessage
+	out       chan SocketMessage
+	done      chan struct{}
+	closeOnce sync.Once
+	closed    bool
 }
 
 func (s *socketImpl) RemoteAddr() string {
@@ -41,32 +45,35 @@ func (s *socketImpl) Closed() bool {
 	return s.closed
 }
 
+func (s *socketImpl) Close() error {
+	var err error
+
+	s.closeOnce.Do(func() {
+		close(s.out)
+		<-s.done
+		err = s.conn.Close()
+		s.closed = true
+	})
+
+	return err
+}
+
 func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	in := make(chan SocketMessage, 1)
-	out := make(chan SocketMessage, 1)
-
 	socket := socketImpl{
-		conn:   conn,
-		in:     in,
-		out:    out,
-		closed: false,
+		conn: conn,
+		in:   make(chan SocketMessage, 1),
+		out:  make(chan SocketMessage, 1),
+		done: make(chan struct{}),
 	}
 
 	go func() {
-		defer func() {
-			close(in)
-			close(out)
-			conn.Close()
-			socket.closed = true
-		}()
-
 		for {
-			mt, payload, err := conn.ReadMessage()
+			mt, payload, err := socket.conn.ReadMessage()
 			if err != nil {
 				log.Printf("%s | %v", color.YellowString("websocket read ended"), err)
 				break
@@ -82,19 +89,23 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 				continue
 			}
 
-			in <- msg
+			socket.in <- msg
 		}
+
+		socket.Close()
 	}()
 
 	go func() {
-		for msg := range out {
+		defer close(socket.done)
+
+		for msg := range socket.out {
 			bytes, err := json.Marshal(msg.Message)
 			if err != nil {
 				log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
 				continue
 			}
 
-			err = conn.WriteMessage(msg.Type, bytes)
+			err = socket.conn.WriteMessage(msg.Type, bytes)
 			if err != nil {
 				log.Printf("%s | %v", color.RedString("websocket message write failed"), err)
 				break

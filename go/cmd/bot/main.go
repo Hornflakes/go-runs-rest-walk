@@ -81,7 +81,7 @@ func main() {
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 			deadline := time.Now().Add(time.Second)
 			if err := conn.WriteControl(websocket.CloseMessage, closeMsg, deadline); err != nil {
-				log.Printf("%s | %v", color.RedString("websocket close failed"), err)
+				log.Printf("%s | %v", color.YellowString("websocket close failed"), err)
 			}
 
 			return

@@ -18,6 +18,10 @@ func (s *testSocket) RemoteAddr() string               { return s.remoteAddr }
 func (s *testSocket) In() <-chan server.SocketMessage  { return s.in }
 func (s *testSocket) Out() chan<- server.SocketMessage { return s.out }
 func (s *testSocket) Closed() bool                     { return s.closed }
+func (s *testSocket) Close() error {
+	s.closed = true
+	return nil
+}
 
 func newTestSocket() *testSocket {
 	return &testSocket{

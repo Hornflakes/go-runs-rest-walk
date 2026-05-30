@@ -23,6 +23,8 @@ func main() {
 					go gameloop.NewGame(p[0], p[1]).Run()
 				} else {
 					log.Printf("%s", color.YellowString("websocket pair ready handshake failed"))
+					p[0].Close()
+					p[1].Close()
 				}
 			}(pair)
 		}
