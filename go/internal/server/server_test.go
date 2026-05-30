@@ -52,6 +52,6 @@ func TestRegisterSocketSkipsClosedWaiter(t *testing.T) {
 
 	pair := <-srv.out
 	if pair[0] != s1 || pair[1] != s2 {
-		t.Errorf("got %v and %v, want bar then baz", pair[0].RemoteAddr(), pair[1].RemoteAddr())
+		t.Errorf("got %s and %s, want bar then baz", pair[0].RemoteAddr(), pair[1].RemoteAddr())
 	}
 }

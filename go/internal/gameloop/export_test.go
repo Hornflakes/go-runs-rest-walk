@@ -10,6 +10,13 @@ func GamePlayers(game *Game) [2]*Player {
 	return game.players
 }
 
+func GameSyntheticClock(game *Game) (*SyntheticClock, bool) {
+	sc, ok := game.clock.(*SyntheticClock)
+	return sc, ok
+}
+
+func QueueWaitForAck(q *Queue) { <-q.ack }
+
 var NewGameWithClock = newGameWithClock
 var NewPlayerWithClock = newPlayerWithClock
 

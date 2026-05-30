@@ -14,7 +14,7 @@ func main() {
 
 	go func() {
 		for pair := range srv.Out {
-			log.Printf("%s | %v <-> %v", color.GreenString("websocket connections paired"), pair[0].RemoteAddr(), pair[1].RemoteAddr())
+			log.Printf("%s | %s <-> %s", color.GreenString("websocket connections paired"), pair[0].RemoteAddr(), pair[1].RemoteAddr())
 
 			go func(p [2]server.Socket) {
 				ok := <-gameloop.WaitForReady(p[0], p[1])

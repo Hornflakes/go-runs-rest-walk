@@ -153,5 +153,5 @@ func (g *Game) Run() {
 		lastLoopTime = startTime
 	}
 
-	log.Printf("%s | ticks=%d elapsed=%v bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, g.clock.Now().Sub(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
+	log.Printf("%s | ticks=%d elapsed=%s bullets=%d active=%d histogram=%s", color.GreenString("game over"), ticks, g.clock.Now().Sub(tickStartTime), len(g.bullets), stats.ActiveGames, g.stats)
 }

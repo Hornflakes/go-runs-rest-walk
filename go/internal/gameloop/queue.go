@@ -13,14 +13,16 @@ type QueueMessage struct {
 
 type Queue struct {
 	messages []*QueueMessage
-	killChan chan struct{}
+	ack      chan struct{}
+	kill     chan struct{}
 	mutex    sync.Mutex
 }
 
 func NewQueue() *Queue {
 	return &Queue{
 		messages: make([]*QueueMessage, 0),
-		killChan: make(chan struct{}),
+		ack:      make(chan struct{}, 1),
+		kill:     make(chan struct{}),
 		mutex:    sync.Mutex{},
 	}
 }
@@ -35,6 +37,12 @@ func (q *Queue) Start(s0, s1 server.Socket) {
 				msg.Message,
 			})
 			q.mutex.Unlock()
+
+			select {
+			case q.ack <- struct{}{}:
+			default:
+			}
+
 		case msg := <-s1.In():
 			q.mutex.Lock()
 			q.messages = append(q.messages, &QueueMessage{
@@ -42,14 +50,20 @@ func (q *Queue) Start(s0, s1 server.Socket) {
 				msg.Message,
 			})
 			q.mutex.Unlock()
-		case <-q.killChan:
+
+			select {
+			case q.ack <- struct{}{}:
+			default:
+			}
+
+		case <-q.kill:
 			return
 		}
 	}
 }
 
 func (q *Queue) Stop() {
-	q.killChan <- struct{}{}
+	q.kill <- struct{}{}
 }
 
 func (q *Queue) empty() bool {

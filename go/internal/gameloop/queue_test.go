@@ -48,18 +48,24 @@ func TestQueue(t *testing.T) {
 		t.Errorf("got %d messages, want %d when flushed", got, want)
 	}
 
-	// TODO: deterministic testing with ack channels
-	s0.in <- server.CreateSocketMessage(server.Shoot)
-	time.Sleep(time.Millisecond)
+	shoot := server.CreateSocketMessage(server.Shoot)
+
+	s0.in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
 	testMessages(t, queue, []uint{1})
 
-	s1.in <- server.CreateSocketMessage(server.Shoot)
-	time.Sleep(time.Millisecond)
+	s1.in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
 	testMessages(t, queue, []uint{2})
 
-	s1.in <- server.CreateSocketMessage(server.Shoot)
-	s0.in <- server.CreateSocketMessage(server.Shoot)
-	time.Sleep(time.Millisecond)
+	s1.in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
+	s0.in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
 	testMessages(t, queue, []uint{2, 1})
 }
 

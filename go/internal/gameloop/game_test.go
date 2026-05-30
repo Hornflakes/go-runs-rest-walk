@@ -8,24 +8,24 @@ import (
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-func startGame(t *testing.T) (*gameloop.Game, [2]*testSocket, *gameloop.SyntheticClock) {
+func startGame(t *testing.T) (*gameloop.Game, [2]*testSocket, *gameloop.Queue) {
 	t.Helper()
-	game, sockets, clock := newGameAndSockets()
+	game, sockets := newGameAndSockets()
 	gameloop.GameStart(game)
 	t.Cleanup(func() { gameloop.GameStop(game) })
-	return game, sockets, clock
+	return game, sockets, gameloop.GameQueue(game)
 }
 
 func TestGameStart(t *testing.T) {
-	game, _, _ := startGame(t)
+	_, _, queue := startGame(t)
 
-	if got := gameloop.GameQueue(game); got == nil {
+	if got := queue; got == nil {
 		t.Fatalf("game.queue = nil, want non-nil")
 	}
 }
 
 func TestGameStop(t *testing.T) {
-	game, _, _ := newGameAndSockets()
+	game, _ := newGameAndSockets()
 	gameloop.GameStart(game)
 
 	done := make(chan struct{})
@@ -42,13 +42,15 @@ func TestGameStop(t *testing.T) {
 }
 
 func TestGameUpdateStateFromMessageQueue(t *testing.T) {
-	game, sockets, _ := startGame(t)
+	game, sockets, queue := startGame(t)
 
 	shoot := server.CreateSocketMessage(server.Shoot)
-	sockets[0].in <- shoot
-	sockets[1].in <- shoot
 
-	time.Sleep(time.Millisecond)
+	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
+	sockets[1].in <- shoot
+	gameloop.QueueWaitForAck(queue)
 
 	gameloop.GameUpdateStateFromMessageQueue(game)
 
@@ -59,16 +61,18 @@ func TestGameUpdateStateFromMessageQueue(t *testing.T) {
 }
 
 func TestGameUpdateStateFromMessageQueueRateLimit(t *testing.T) {
-	game, sockets, _ := startGame(t)
+	game, sockets, queue := startGame(t)
 
 	shoot := server.CreateSocketMessage(server.Shoot)
-	sockets[0].in <- shoot
 
-	time.Sleep(time.Millisecond)
+	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
 
 	gameloop.GameUpdateStateFromMessageQueue(game)
 
 	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
 	gameloop.GameUpdateStateFromMessageQueue(game)
 
 	want := 1
@@ -78,13 +82,15 @@ func TestGameUpdateStateFromMessageQueueRateLimit(t *testing.T) {
 }
 
 func TestGameUpdateBulletsPositions(t *testing.T) {
-	game, sockets, _ := startGame(t)
+	game, sockets, queue := startGame(t)
 
 	shoot := server.CreateSocketMessage(server.Shoot)
-	sockets[0].in <- shoot
-	sockets[1].in <- shoot
 
-	time.Sleep(time.Millisecond)
+	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
+	sockets[1].in <- shoot
+	gameloop.QueueWaitForAck(queue)
 
 	gameloop.GameUpdateStateFromMessageQueue(game)
 
@@ -117,13 +123,15 @@ func TestGameUpdateBulletsPositions(t *testing.T) {
 }
 
 func TestGameCheckBulletBulletCollisions(t *testing.T) {
-	game, sockets, _ := startGame(t)
+	game, sockets, queue := startGame(t)
 
 	shoot := server.CreateSocketMessage(server.Shoot)
-	sockets[0].in <- shoot
-	sockets[1].in <- shoot
 
-	time.Sleep(time.Millisecond)
+	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
+
+	sockets[1].in <- shoot
+	gameloop.QueueWaitForAck(queue)
 
 	gameloop.GameUpdateStateFromMessageQueue(game)
 
@@ -148,13 +156,13 @@ func TestGameCheckBulletBulletCollisions(t *testing.T) {
 }
 
 func TestGameCheckBulletPlayerCollisions(t *testing.T) {
-	game, sockets, _ := startGame(t)
+	game, sockets, queue := startGame(t)
 
 	shoot := server.CreateSocketMessage(server.Shoot)
-	sockets[0].in <- shoot
 	sheriff := gameloop.GamePlayers(game)[1]
 
-	time.Sleep(time.Millisecond)
+	sockets[0].in <- shoot
+	gameloop.QueueWaitForAck(queue)
 
 	gameloop.GameUpdateStateFromMessageQueue(game)
 

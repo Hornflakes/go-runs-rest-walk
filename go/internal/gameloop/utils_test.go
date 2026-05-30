@@ -28,7 +28,7 @@ func newTestSocket() *testSocket {
 	}
 }
 
-func newGameAndSockets() (*gameloop.Game, [2]*testSocket, *gameloop.SyntheticClock) {
+func newGameAndSockets() (*gameloop.Game, [2]*testSocket) {
 	clock := &gameloop.SyntheticClock{}
 	clock.SetNow(time.Unix(1, 0))
 	sockets := [2]*testSocket{
@@ -36,5 +36,5 @@ func newGameAndSockets() (*gameloop.Game, [2]*testSocket, *gameloop.SyntheticClo
 		newTestSocket(),
 	}
 	game := gameloop.NewGameWithClock(sockets[0], sockets[1], clock)
-	return game, sockets, clock
+	return game, sockets
 }

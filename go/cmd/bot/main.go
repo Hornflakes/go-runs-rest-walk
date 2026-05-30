@@ -52,6 +52,7 @@ func main() {
 		case server.GameOn:
 			log.Printf("%s", color.CyanString("game on"))
 			playing.Store(true)
+
 			go func() {
 				ticker := time.NewTicker(200 * time.Millisecond)
 				defer ticker.Stop()
@@ -59,11 +60,13 @@ func main() {
 					if !playing.Load() {
 						return
 					}
+
 					reply, err := json.Marshal(server.CreateMessage(server.Shoot))
 					if err != nil {
 						log.Printf("%s | %v", color.MagentaString("websocket message marshal failed"), err)
 						continue
 					}
+
 					if err := conn.WriteMessage(websocket.TextMessage, reply); err != nil {
 						log.Printf("%s | %v", color.RedString("websocket message write failed"), err)
 						return
@@ -74,6 +77,13 @@ func main() {
 		case server.GameOver:
 			playing.Store(false)
 			log.Printf("%s | %s", color.GreenString("game over"), msg.Msg)
+
+			closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+			deadline := time.Now().Add(time.Second)
+			if err := conn.WriteControl(websocket.CloseMessage, closeMsg, deadline); err != nil {
+				log.Printf("%s | %v", color.RedString("websocket close failed"), err)
+			}
+
 			return
 		}
 	}
