@@ -89,7 +89,7 @@ func CreateWinnerMessage(gameFrameStats *stats.GameFrameStats) SocketMessage {
 		Type: websocket.TextMessage,
 		Message: Message{
 			Type: GameOver,
-			Msg:  fmt.Sprintf("winner(%d)->%s", stats.ActiveGames, gameFrameStats),
+			Msg:  fmt.Sprintf("winner(%d)=%s", stats.ActiveGames, gameFrameStats),
 		},
 	}
 }
