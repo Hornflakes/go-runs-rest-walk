@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/hornflakes/go-runs-rest-walk/internal/stats"
@@ -68,11 +70,10 @@ func CreateHelloMessage(playerId uint64) SocketMessage {
 		Type: websocket.TextMessage,
 		Message: Message{
 			Type: Hello,
-			Msg:  fmt.Sprintf("%d", playerId),
+			Msg:  fmt.Sprintf("playerId=%d", playerId),
 		},
 	}
 }
-
 func CreateReadyMessage(enemyId uint64) SocketMessage {
 	return SocketMessage{
 		Type: websocket.TextMessage,
@@ -101,4 +102,17 @@ func CreateLoserMessage() SocketMessage {
 			Msg:  "loser",
 		},
 	}
+}
+
+func parsePrefixedId(msg, prefix string) (uint64, error) {
+	rest := strings.TrimPrefix(msg, prefix)
+	return strconv.ParseUint(rest, 10, 64)
+}
+
+func ParseHelloMessage(msg string) (uint64, error) {
+	return parsePrefixedId(msg, "playerId=")
+}
+
+func ParseReadyMessage(msg string) (uint64, error) {
+	return parsePrefixedId(msg, "enemyId=")
 }

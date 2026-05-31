@@ -17,21 +17,18 @@ func TestWaitForReady(t *testing.T) {
 	msg0 := <-s0.out
 	msg1 := <-s1.out
 
-	want := server.Ready
-	if got := msg0.Message.Type; got != want {
+	if got, want := msg0.Message.Type, server.Ready; got != want {
 		t.Errorf("s0 out Type = %d, want %d", got, want)
 	}
-	if got := msg1.Message.Type; got != want {
+	if got, want := msg1.Message.Type, server.Ready; got != want {
 		t.Errorf("s1 out Type = %d, want %d", got, want)
 	}
 
-	wantMsg := "enemyId=2"
-	if msg0.Message.Msg != wantMsg {
-		t.Errorf("s0 Msg = %q, want %q", msg0.Message.Msg, wantMsg)
+	if got, want := msg0.Message.Msg, "enemyId=2"; got != want {
+		t.Errorf("s0 Msg = %q, want %q", got, want)
 	}
-	wantMsg = "enemyId=1"
-	if msg1.Message.Msg != wantMsg {
-		t.Errorf("s1 Msg = %q, want %q", msg1.Message.Msg, wantMsg)
+	if got, want := msg1.Message.Msg, "enemyId=1"; got != want {
+		t.Errorf("s1 Msg = %q, want %q", got, want)
 	}
 
 	ready := server.CreateSocketMessage(server.Ready)
@@ -40,8 +37,8 @@ func TestWaitForReady(t *testing.T) {
 
 	select {
 	case ok := <-done:
-		if got := ok; got != true {
-			t.Errorf("got %t, want true", got)
+		if got, want := ok, true; got != want {
+			t.Errorf("got %t, want %t", got, want)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("not ready within timeout (possible deadlock)")

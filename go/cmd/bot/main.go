@@ -19,11 +19,6 @@ var (
 	pairLog  *logger.Logger
 )
 
-func parseReadyMessage(msg string) (enemyId uint64) {
-	fmt.Sscanf(msg, "enemyId=%d", &enemyId)
-	return enemyId
-}
-
 func main() {
 	url := "ws://127.0.0.1:37373/"
 
@@ -48,7 +43,12 @@ func main() {
 
 		switch msg.Type {
 		case server.Hello:
-			fmt.Sscanf(msg.Msg, "%d", &playerId)
+			playerId, err = server.ParseHelloMessage(msg.Msg)
+			if err != nil {
+				logger.HardError("websocket hello message parse failed", fmt.Sprintf("addr=%s err=%v", conn.LocalAddr(), err))
+				return
+			}
+
 			logger.Info(
 				"websocket connected",
 				logger.PlayerWithAddr(playerId, conn.LocalAddr().String()),
@@ -56,7 +56,12 @@ func main() {
 
 		case server.Ready:
 			if pairLog == nil {
-				enemyId = parseReadyMessage(msg.Msg)
+				enemyId, err = server.ParseReadyMessage(msg.Msg)
+				if err != nil {
+					logger.HardError("websocket ready message parse failed", fmt.Sprintf("addr=%s err=%v", conn.LocalAddr(), err))
+					return
+				}
+
 				id0, id1 := playerId, enemyId
 				if id0 > id1 {
 					id0, id1 = id1, id0

@@ -42,19 +42,19 @@ func TestRectCollides(t *testing.T) {
 		Height: 23,
 	}
 
-	if got := a.Collides(&b); got != false {
-		t.Errorf("%+v.Collides(%+v) = %t, want false", a, b, got)
+	if got, want := a.Collides(&b), false; got != want {
+		t.Errorf("%+v.Collides(%+v) = %t, want %t", a, b, got, want)
 	}
 
-	if got := a.Collides(&c); got != true {
-		t.Errorf("%+v.Collides(%+v) = %t, want true", a, c, got)
+	if got, want := a.Collides(&c), true; got != want {
+		t.Errorf("%+v.Collides(%+v) = %t, want %t", a, c, got, want)
 	}
 
-	if got := a.Collides(&d); got != false {
-		t.Errorf("%+v.Collides(%+v) = %t, want false", a, d, got)
+	if got, want := a.Collides(&d), false; got != want {
+		t.Errorf("%+v.Collides(%+v) = %t, want %t", a, d, got, want)
 	}
 
-	if got := a.Collides(&e); got != true {
-		t.Errorf("%+v.Collides(%+v) = %t, want true", a, e, got)
+	if got, want := a.Collides(&e), true; got != want {
+		t.Errorf("%+v.Collides(%+v) = %t, want %t", a, e, got, want)
 	}
 }

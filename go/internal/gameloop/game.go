@@ -16,6 +16,8 @@ type Game struct {
 	bullets []*Bullet
 	clock   Clock
 	stats   *stats.GameFrameStats
+
+	verbose bool
 }
 
 func newGameWithClock(s0, s1 server.Socket, clock Clock) *Game {
@@ -27,8 +29,10 @@ func newGameWithClock(s0, s1 server.Socket, clock Clock) *Game {
 		stats: stats.NewGameFrameStats()}
 }
 
-func NewGame(s0, s1 server.Socket) *Game {
-	return newGameWithClock(s0, s1, &RealClock{})
+func NewGame(s0, s1 server.Socket, verbose bool) *Game {
+	game := newGameWithClock(s0, s1, &RealClock{})
+	game.verbose = verbose
+	return game
 }
 
 func (g *Game) start() {
@@ -53,9 +57,11 @@ func (g *Game) updateStateFromMessageQueue(log *logger.Logger) {
 				bullet := CreateBulletFromPlayer(player, BulletSpeedMs)
 				g.bullets = append(g.bullets, &bullet)
 
-				log.Info("player shot", fmt.Sprintf("%s bullet=%d",
-					logger.Player(g.sockets[message.From-1].PlayerId()),
-					len(g.bullets)))
+				if g.verbose {
+					log.Info("player shot", fmt.Sprintf("%s bullet=%d",
+						logger.Player(g.sockets[message.From-1].PlayerId()),
+						len(g.bullets)))
+				}
 			}
 		}
 	}

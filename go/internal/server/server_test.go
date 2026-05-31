@@ -5,6 +5,7 @@ import "testing"
 type testSocket struct {
 	playerId   uint64
 	remoteAddr string
+	out        chan SocketMessage
 	closed     bool
 }
 
@@ -12,7 +13,7 @@ func (s *testSocket) PlayerId() uint64          { return s.playerId }
 func (s *testSocket) setPlayerId(id uint64)     { s.playerId = id }
 func (s *testSocket) RemoteAddr() string        { return s.remoteAddr }
 func (s *testSocket) In() <-chan SocketMessage  { return nil }
-func (f *testSocket) Out() chan<- SocketMessage { return make(chan SocketMessage, 1) }
+func (s *testSocket) Out() chan<- SocketMessage { return s.out }
 func (s *testSocket) Closed() bool              { return s.closed }
 func (s *testSocket) Close() error {
 	s.closed = true
@@ -21,8 +22,8 @@ func (s *testSocket) Close() error {
 
 func TestRegisterSocket(t *testing.T) {
 	srv := NewServer()
-	s0 := &testSocket{remoteAddr: "foo"}
-	s1 := &testSocket{remoteAddr: "bar"}
+	s0 := &testSocket{remoteAddr: "foo", out: make(chan SocketMessage, 1)}
+	s1 := &testSocket{remoteAddr: "bar", out: make(chan SocketMessage, 1)}
 
 	srv.registerSocket(s0)
 
@@ -50,9 +51,9 @@ func TestRegisterSocket(t *testing.T) {
 
 func TestRegisterSocketSkipsClosedWaiter(t *testing.T) {
 	srv := NewServer()
-	s0 := &testSocket{remoteAddr: "foo", closed: true}
-	s1 := &testSocket{remoteAddr: "bar"}
-	s2 := &testSocket{remoteAddr: "baz"}
+	s0 := &testSocket{remoteAddr: "foo", out: make(chan SocketMessage, 1), closed: true}
+	s1 := &testSocket{remoteAddr: "bar", out: make(chan SocketMessage, 1)}
+	s2 := &testSocket{remoteAddr: "baz", out: make(chan SocketMessage, 1)}
 
 	srv.registerSocket(s0)
 	srv.registerSocket(s1)

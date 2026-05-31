@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -10,6 +11,9 @@ import (
 )
 
 func main() {
+	verbose := flag.Bool("verbose", false, "log each registered player shot")
+	flag.Parse()
+
 	srv := server.NewServer()
 
 	go func() {
@@ -22,7 +26,7 @@ func main() {
 				if ok {
 					l.Milestone("websockets ready handshake ok", "")
 
-					go gameloop.NewGame(p[0], p[1]).Run()
+					go gameloop.NewGame(p[0], p[1], *verbose).Run()
 				} else {
 					l.Warn("websockets ready handshake failed", "")
 

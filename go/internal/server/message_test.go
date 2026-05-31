@@ -14,8 +14,7 @@ func TestUnmarshalShoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := Shoot
-	if got := m.Type; got != want {
+	if got, want := m.Type, Shoot; got != want {
 		t.Errorf("Type = %d, want %d", got, want)
 	}
 }
@@ -49,7 +48,7 @@ func TestCreateHelloMessage(t *testing.T) {
 		t.Errorf("Type = %d, want %d", got, want)
 	}
 
-	if got, want := msg.Msg, "3"; got != want {
+	if got, want := msg.Msg, "playerId=3"; got != want {
 		t.Errorf("Msg = %q, want %q", got, want)
 	}
 }
@@ -73,27 +72,71 @@ func TestCreateWinnerMessage(t *testing.T) {
 
 	msg := CreateWinnerMessage(gfs).Message
 
-	want0 := GameOver
-	if got := msg.Type; got != want0 {
-		t.Errorf("Type = %d, want %d", got, want0)
+	if got, want := msg.Type, GameOver; got != want {
+		t.Errorf("Type = %d, want %d", got, want)
 	}
 
-	want1 := "winner(0)->1,1,0,0,0,0,0,0"
-	if got := msg.Msg; got != want1 {
-		t.Errorf("Msg = %q, want %q", got, want1)
+	if got, want := msg.Msg, "winner(0)->1,1,0,0,0,0,0,0"; got != want {
+		t.Errorf("Msg = %q, want %q", got, want)
 	}
 }
 
 func TestCreateLoserMessage(t *testing.T) {
 	msg := CreateLoserMessage().Message
 
-	want0 := GameOver
-	if got := msg.Type; got != want0 {
-		t.Errorf("Type = %d, want %d", got, want0)
+	if got, want := msg.Type, GameOver; got != want {
+		t.Errorf("Type = %d, want %d", got, want)
 	}
 
-	want1 := "loser"
-	if got := msg.Msg; got != want1 {
-		t.Errorf("Msg = %q, want %q", got, want1)
+	if got, want := msg.Msg, "loser"; got != want {
+		t.Errorf("Msg = %q, want %q", got, want)
+	}
+}
+
+func TestParseHelloMessage(t *testing.T) {
+	msg := "playerId=3"
+
+	got, err := ParseHelloMessage(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := got, uint64(3); got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+
+	msg = "3"
+
+	got, err = ParseHelloMessage(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := got, uint64(3); got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+}
+
+func TestParseReadyMessage(t *testing.T) {
+	msg := "enemyId=7"
+
+	got, err := ParseReadyMessage(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := got, uint64(7); got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+
+	msg = "7"
+
+	got, err = ParseReadyMessage(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := got, uint64(7); got != want {
+		t.Errorf("got %d, want %d", got, want)
 	}
 }

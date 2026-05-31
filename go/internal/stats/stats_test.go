@@ -9,8 +9,7 @@ func TestGameFrameStatsString(t *testing.T) {
 	gfs.AddDeltaTime(16_100)
 	gfs.AddDeltaTime(18_000)
 
-	want := "1,1,0,0,0,0,0,0"
-	if got := gfs.String(); got != want {
+	if got, want := gfs.String(), "1,1,0,0,0,0,0,0"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -26,8 +25,7 @@ func TestGameFrameStatsAddDeltaTime(t *testing.T) {
 	gfs.AddDeltaTime(31_000)
 	gfs.AddDeltaTime(41_000)
 
-	want := "1,1,1,1,1,1,1,1"
-	if got := gfs.String(); got != want {
+	if got, want := gfs.String(), "1,1,1,1,1,1,1,1"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

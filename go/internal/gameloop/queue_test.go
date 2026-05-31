@@ -13,22 +13,19 @@ func testMessages(t *testing.T, queue *gameloop.Queue, froms []uint) {
 
 	messages := queue.Flush()
 
-	want := len(froms)
-	if got := len(messages); got != want {
+	if got, want := len(messages), len(froms); got != want {
 		t.Fatalf("got %d messages, want %d messages", got, want)
 	}
 
 	for i, message := range messages {
-		want := froms[i]
-		if got := message.From; got != want {
+		if got, want := message.From, froms[i]; got != want {
 			t.Errorf("messages[%d].From = %d, want %d", i, got, want)
 		}
 	}
 
 	messages = queue.Flush()
 
-	want = 0
-	if got := len(messages); got != want {
+	if got, want := len(messages), 0; got != want {
 		t.Errorf("got %d messages, want %d", got, want)
 	}
 }
@@ -43,8 +40,7 @@ func TestQueue(t *testing.T) {
 
 	messages := queue.Flush()
 
-	want := 0
-	if got := len(messages); got != want {
+	if got, want := len(messages), 0; got != want {
 		t.Errorf("got %d messages, want %d when flushed", got, want)
 	}
 

@@ -57,8 +57,7 @@ func TestGameUpdateStateFromMessageQueue(t *testing.T) {
 
 	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
-	want := 2
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Errorf("got %d bullets, want %d", got, want)
 	}
 }
@@ -78,8 +77,7 @@ func TestGameUpdateStateFromMessageQueueRateLimit(t *testing.T) {
 
 	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
-	want := 1
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 1; got != want {
 		t.Errorf("got %d bullets, want %d", got, want)
 	}
 }
@@ -97,8 +95,7 @@ func TestGameUpdateBulletsPositions(t *testing.T) {
 
 	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
-	want := 2
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)
 	}
 
@@ -138,22 +135,19 @@ func TestGameCheckBulletBulletCollisions(t *testing.T) {
 
 	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
-	want := 2
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)
 	}
 
 	gameloop.GameUpdateBulletsPositions(game, 983_000)
 
-	want = 2
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Fatalf("after move: got %d bullets, want %d", got, want)
 	}
 
 	gameloop.GameCheckBulletBulletCollisions(game)
 
-	want = 0
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 0; got != want {
 		t.Errorf("got %d bullets, want %d", got, want)
 	}
 }
@@ -169,8 +163,7 @@ func TestGameCheckBulletPlayerCollisions(t *testing.T) {
 
 	gameloop.GameUpdateStateFromMessageQueue(game, log)
 
-	want := 1
-	if got := len(gameloop.GameBullets(game)); got != want {
+	if got, want := len(gameloop.GameBullets(game)), 1; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)
 	}
 
@@ -189,7 +182,7 @@ func TestGameCheckBulletPlayerCollisions(t *testing.T) {
 		t.Fatalf("bullet: %+v hit player = nil, want sheriff %+v", bullets[0], sheriff)
 	}
 
-	if got := player; got != sheriff {
+	if got, want := player, sheriff; got != want {
 		t.Errorf("bullet %+v: hit player = %+v, want sheriff %+v", bullets[0], got, sheriff)
 	}
 }

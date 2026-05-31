@@ -17,16 +17,16 @@ func TestPlayerFire(t *testing.T) {
 	clock.SetNow(t0)
 	player := gameloop.NewPlayerWithClock(pos, dir, fireRate, clock)
 
-	if got := player.Fire(); got != true {
-		t.Fatalf("first player.Fire() = %t, want true", got)
+	if got, want := player.Fire(), true; got != want {
+		t.Fatalf("first player.Fire() = %t, want %t", got, want)
 	}
-	if got := player.Fire(); got != false {
-		t.Errorf("instant second player.Fire() = %t, want false", got)
+	if got, want := player.Fire(), false; got != want {
+		t.Errorf("instant second player.Fire() = %t, want %t", got, want)
 	}
 
 	clock.SetNow(t0.Add((time.Duration(fireRate + 1)) * time.Millisecond))
-	if got := player.Fire(); got != true {
-		t.Errorf("after cooldown player.Fire() = %t, want true", got)
+	if got, want := player.Fire(), true; got != want {
+		t.Errorf("after cooldown player.Fire() = %t, want %t", got, want)
 	}
 }
 
@@ -41,8 +41,7 @@ func TestCreateBulletFromPlayer(t *testing.T) {
 		t.Errorf("expected bullet to be on the positive side of the player")
 	}
 
-	want := 64.0
-	if got := bullet.Velocity[0]; got != want {
+	if got, want := bullet.Velocity[0], 64.0; got != want {
 		t.Errorf("bullet.Velocity[0] = %f, want %f", got, want)
 	}
 
@@ -53,8 +52,7 @@ func TestCreateBulletFromPlayer(t *testing.T) {
 		t.Errorf("expected bullet to be on the negative side of the player")
 	}
 
-	want = -36.0
-	if got := bullet.Velocity[0]; got != want {
-		t.Errorf("got %f, want %f", got, want)
+	if got, want := bullet.Velocity[0], -36.0; got != want {
+		t.Errorf("bullet.Velocity[0] = %f, want %f", got, want)
 	}
 }
