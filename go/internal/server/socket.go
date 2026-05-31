@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/gorilla/websocket"
 	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
@@ -18,6 +19,7 @@ type Socket interface {
 	PlayerId() uint64
 	In() <-chan SocketMessage
 	Out() chan<- SocketMessage
+	Disconnected() bool
 	Closed() bool
 	Close() error
 }
@@ -27,13 +29,14 @@ type playerIdSetter interface {
 }
 
 type socketImpl struct {
-	conn      *websocket.Conn
-	playerId  uint64
-	in        chan SocketMessage
-	out       chan SocketMessage
-	done      chan struct{}
-	closeOnce sync.Once
-	closed    bool
+	conn         *websocket.Conn
+	playerId     uint64
+	in           chan SocketMessage
+	out          chan SocketMessage
+	done         chan struct{}
+	closeOnce    sync.Once
+	disconnected atomic.Bool
+	closed       bool
 }
 
 func (s *socketImpl) PlayerId() uint64      { return s.playerId }
@@ -49,6 +52,17 @@ func (s *socketImpl) In() <-chan SocketMessage {
 
 func (s *socketImpl) Out() chan<- SocketMessage {
 	return s.out
+}
+
+func (s *socketImpl) Disconnected() bool {
+	return s.disconnected.Load()
+}
+
+func (s *socketImpl) markDisconnected() {
+	if s.disconnected.Swap(true) {
+		return
+	}
+	s.conn.Close()
 }
 
 func (s *socketImpl) Closed() bool {
@@ -115,7 +129,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 			socket.in <- msg
 		}
 
-		socket.Close()
+		socket.markDisconnected()
 	}()
 
 	go func() {
@@ -130,6 +144,10 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 
 			err = socket.conn.WriteMessage(msg.Type, bytes)
 			if err != nil {
+				if socket.Disconnected() {
+					continue
+				}
+
 				logger.HardError("websocket message write failed", socket.logDetail(err))
 				break
 			}

@@ -22,7 +22,7 @@ func NewQueue() *Queue {
 	return &Queue{
 		messages: make([]*QueueMessage, 0),
 		ack:      make(chan struct{}, 1),
-		stop:     make(chan struct{}),
+		stop:     make(chan struct{}, 1),
 		mutex:    sync.Mutex{},
 	}
 }

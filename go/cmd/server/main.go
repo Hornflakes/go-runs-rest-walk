@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
@@ -22,17 +23,25 @@ func main() {
 			log.Milestone("websockets paired", "")
 
 			go func(p [2]server.Socket, l *logger.Logger) {
-				ok := <-gameloop.WaitForReady(p[0], p[1])
-				if ok {
-					l.Milestone("websockets ready handshake ok", "")
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
 
-					go gameloop.NewGame(p[0], p[1], *verbose).Run()
-				} else {
+				go server.WatchPairDisconnect(ctx, cancel, p[0], p[1])
+
+				ok := <-gameloop.WaitForReady(ctx, p[0], p[1])
+				cancel()
+
+				if !ok {
 					l.Warn("websockets ready handshake failed", "")
 
 					p[0].Close()
 					p[1].Close()
+					return
 				}
+
+				l.Milestone("websockets ready handshake ok", "")
+
+				gameloop.NewGame(p[0], p[1], *verbose).Run()
 			}(pair, log)
 		}
 	}()

@@ -1,6 +1,7 @@
 package gameloop_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ func TestWaitForReady(t *testing.T) {
 	s0 := newTestSocket(1)
 	s1 := newTestSocket(2)
 
-	done := gameloop.WaitForReady(s0, s1)
+	done := gameloop.WaitForReady(context.Background(), s0, s1)
 
 	msg0 := <-s0.out
 	msg1 := <-s1.out

@@ -1,12 +1,12 @@
 package gameloop
 
 import (
-	"time"
+	"context"
 
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 )
 
-func sendAndWait(s0, s1 server.Socket) <-chan bool {
+func sendAndWait(ctx context.Context, s0, s1 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
@@ -20,10 +20,14 @@ func sendAndWait(s0, s1 server.Socket) <-chan bool {
 
 		for {
 			select {
+			case <-ctx.Done():
+				success = false
+				return
+
 			case msg, ok := <-in1:
 				if !ok {
 					success = false
-					break
+					return
 				}
 
 				if msg.Message.Type == server.Ready {
@@ -34,7 +38,7 @@ func sendAndWait(s0, s1 server.Socket) <-chan bool {
 			case msg, ok := <-in2:
 				if !ok {
 					success = false
-					break
+					return
 				}
 
 				if msg.Message.Type == server.Ready {
@@ -55,16 +59,18 @@ func sendAndWait(s0, s1 server.Socket) <-chan bool {
 	return ready
 }
 
-func WaitForReady(s0, s1 server.Socket) <-chan bool {
+func WaitForReady(ctx context.Context, s0, s1 server.Socket) <-chan bool {
 	ready := make(chan bool)
 
 	go func() {
 		defer close(ready)
+		ctx, cancel := context.WithTimeout(ctx, ReadyTimeoutS)
+		defer cancel()
 
 		select {
-		case ok := <-sendAndWait(s0, s1):
+		case ok := <-sendAndWait(ctx, s0, s1):
 			ready <- ok
-		case <-time.After(ReadyTimeoutS):
+		case <-ctx.Done():
 			ready <- false
 		}
 	}()

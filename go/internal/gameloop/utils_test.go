@@ -8,17 +8,19 @@ import (
 )
 
 type testSocket struct {
-	playerId   uint64
-	remoteAddr string
-	in         chan server.SocketMessage
-	out        chan server.SocketMessage
-	closed     bool
+	playerId     uint64
+	remoteAddr   string
+	in           chan server.SocketMessage
+	out          chan server.SocketMessage
+	disconnected bool
+	closed       bool
 }
 
 func (s *testSocket) PlayerId() uint64                 { return s.playerId }
 func (s *testSocket) RemoteAddr() string               { return s.remoteAddr }
 func (s *testSocket) In() <-chan server.SocketMessage  { return s.in }
 func (s *testSocket) Out() chan<- server.SocketMessage { return s.out }
+func (s *testSocket) Disconnected() bool               { return s.disconnected }
 func (s *testSocket) Closed() bool                     { return s.closed }
 func (s *testSocket) Close() error {
 	s.closed = true

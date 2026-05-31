@@ -3,10 +3,11 @@ package server
 import "testing"
 
 type testSocket struct {
-	playerId   uint64
-	remoteAddr string
-	out        chan SocketMessage
-	closed     bool
+	playerId     uint64
+	remoteAddr   string
+	out          chan SocketMessage
+	disconnected bool
+	closed       bool
 }
 
 func (s *testSocket) PlayerId() uint64          { return s.playerId }
@@ -14,6 +15,7 @@ func (s *testSocket) setPlayerId(id uint64)     { s.playerId = id }
 func (s *testSocket) RemoteAddr() string        { return s.remoteAddr }
 func (s *testSocket) In() <-chan SocketMessage  { return nil }
 func (s *testSocket) Out() chan<- SocketMessage { return s.out }
+func (s *testSocket) Disconnected() bool        { return s.disconnected }
 func (s *testSocket) Closed() bool              { return s.closed }
 func (s *testSocket) Close() error {
 	s.closed = true
@@ -61,6 +63,33 @@ func TestRegisterSocketSkipsClosedWaiter(t *testing.T) {
 	select {
 	case <-srv.out:
 		t.Fatal("should not pair with closed waiter")
+	default:
+	}
+
+	srv.registerSocket(s2)
+
+	pair := <-srv.out
+	if pair[0] != s1 || pair[1] != s2 {
+		t.Errorf("got %s and %s, want bar then baz", pair[0].RemoteAddr(), pair[1].RemoteAddr())
+	}
+}
+
+func TestRegisterSocketSkipsDisconnectedWaiter(t *testing.T) {
+	srv := NewServer()
+	s0 := &testSocket{remoteAddr: "foo", out: make(chan SocketMessage, 1), disconnected: true}
+	s1 := &testSocket{remoteAddr: "bar", out: make(chan SocketMessage, 1)}
+	s2 := &testSocket{remoteAddr: "baz", out: make(chan SocketMessage, 1)}
+
+	srv.registerSocket(s0)
+	srv.registerSocket(s1)
+
+	if got, want := s0.closed, true; got != want {
+		t.Errorf("s0.closed = %t, want %t", got, want)
+	}
+
+	select {
+	case <-srv.out:
+		t.Fatal("should not pair with disconnected waiter")
 	default:
 	}
 
