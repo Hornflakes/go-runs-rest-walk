@@ -48,7 +48,7 @@ func (s *Server) registerSocket(socket Socket) {
 	}
 
 	if s.waitingSocket != nil {
-		s.waitingSocket.Close()
+		_ = s.waitingSocket.Close()
 		s.waitingSocket = nil
 	}
 

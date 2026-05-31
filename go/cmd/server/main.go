@@ -34,8 +34,8 @@ func main() {
 				if !ok {
 					l.Warn("websockets ready handshake failed", "")
 
-					p[0].Close()
-					p[1].Close()
+					_ = p[0].Close()
+					_ = p[1].Close()
 					return
 				}
 

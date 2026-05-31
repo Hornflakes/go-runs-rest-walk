@@ -157,14 +157,8 @@ func (g *Game) Run() {
 			winnerSocket.Out() <- server.CreateWinnerMessage(g.stats)
 			loserSocket.Out() <- server.CreateLoserMessage()
 
-			if err := winnerSocket.Close(); err != nil {
-				log.Warn("websocket close failed",
-					fmt.Sprintf("%s err=%v", logger.Player(winnerSocket.PlayerId()), err))
-			}
-			if err := loserSocket.Close(); err != nil {
-				log.Warn("websocket close failed",
-					fmt.Sprintf("%s err=%v", logger.Player(loserSocket.PlayerId()), err))
-			}
+			_ = winnerSocket.Close()
+			_ = loserSocket.Close()
 
 			break
 		}

@@ -76,7 +76,7 @@ func TestCreateWinnerMessage(t *testing.T) {
 		t.Errorf("Type = %d, want %d", got, want)
 	}
 
-	if got, want := msg.Msg, "winner(0)->1,1,0,0,0,0,0,0"; got != want {
+	if got, want := msg.Msg, "winner(0)=1,1,0,0,0,0,0,0"; got != want {
 		t.Errorf("Msg = %q, want %q", got, want)
 	}
 }

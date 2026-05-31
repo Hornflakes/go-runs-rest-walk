@@ -37,7 +37,7 @@ func closeConnGracefully(conn *websocket.Conn, playing *atomic.Bool, shootDone c
 
 	closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 	deadline := time.Now().Add(time.Second)
-	conn.WriteControl(websocket.CloseMessage, closeMsg, deadline)
+	_ = conn.WriteControl(websocket.CloseMessage, closeMsg, deadline)
 }
 
 func playOneGame(ctx context.Context, url string, fireIntervalTime time.Duration) error {
@@ -53,7 +53,7 @@ func playOneGame(ctx context.Context, url string, fireIntervalTime time.Duration
 	shutdown := func() {
 		shutdownOnce.Do(func() {
 			closeConnGracefully(conn, &playing, shootDone)
-			conn.Close()
+			_ = conn.Close()
 		})
 	}
 	defer shutdown()

@@ -62,7 +62,7 @@ func (s *socketImpl) markDisconnected() {
 	if s.disconnected.Swap(true) {
 		return
 	}
-	s.conn.Close()
+	_ = s.conn.Close()
 }
 
 func (s *socketImpl) Closed() bool {

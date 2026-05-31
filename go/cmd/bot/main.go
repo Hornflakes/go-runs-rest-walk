@@ -115,9 +115,7 @@ func main() {
 
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 			deadline := time.Now().Add(time.Second)
-			if err := conn.WriteControl(websocket.CloseMessage, closeMsg, deadline); err != nil {
-				pairLog.Warn("websocket close failed", fmt.Sprintf("err=%v", err))
-			}
+			_ = conn.WriteControl(websocket.CloseMessage, closeMsg, deadline)
 
 			return
 		}
