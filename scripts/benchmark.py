@@ -85,9 +85,9 @@ def main() -> None:
     if args.output:
         out = Path(args.output).resolve()
     elif args.x == "active_games":
-        out = results_dir / "rolling-load.png"
+        out = results_dir / "rolling-active-games.png"
     else:
-        out = results_dir / "rolling.png"
+        out = results_dir / "rolling-over-time.png"
 
     plot_rollings(paths, out, args.x)
 

@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	runFileRx   = regexp.MustCompile(`^(.+)-N(\d+)-G(\d+)-run(\d+)-load\.res$`)
+	runFileRx   = regexp.MustCompile(`^([a-z]+)-N(\d+)-G(\d+)(?:-[^-]+)*-run(\d+)-load\.res$`)
 	loadStartRx = regexp.MustCompile(
 		`load \| url=(\S+) connections=(\d+) games=(\d+) stagger=(\S+) fire=(\S+)`,
 	)
@@ -179,6 +179,20 @@ func bucket0Ratio(games []game) float64 {
 	return float64(b0) / float64(total)
 }
 
+func activeGamesStats(games []game) (max uint64, mean float64) {
+	if len(games) == 0 {
+		return 0, 0
+	}
+	var sum uint64
+	for _, g := range games {
+		sum += g.activeGames
+		if g.activeGames > max {
+			max = g.activeGames
+		}
+	}
+	return max, float64(sum) / float64(len(games))
+}
+
 func appendRunsCSV(path, runId string, name runName, meta loadMeta, finish loadFinish, games []game) error {
 	needHeader := false
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -200,7 +214,7 @@ func appendRunsCSV(path, runId string, name runName, meta loadMeta, finish loadF
 		if err := w.Write([]string{
 			"run_id", "language", "connections", "games_per_conn", "run_number",
 			"url", "stagger", "fire",
-			"games_parsed", "bucket0_ratio_overall",
+			"games_parsed", "bucket0_ratio_overall", "max_active_games", "mean_active_games",
 			"games_over", "games_failed", "clients_started", "clients_done",
 		}); err != nil {
 			return err
@@ -211,6 +225,7 @@ func appendRunsCSV(path, runId string, name runName, meta loadMeta, finish loadF
 	connections := meta.connections
 	gamesPerConn := meta.games
 	runNumber := strconv.Itoa(name.runNumber)
+	maxAG, meanAG := activeGamesStats(games)
 
 	if err := w.Write([]string{
 		runId,
@@ -223,6 +238,8 @@ func appendRunsCSV(path, runId string, name runName, meta loadMeta, finish loadF
 		meta.fire,
 		strconv.Itoa(len(games)),
 		fmt.Sprintf("%.2f", bucket0Ratio(games)),
+		strconv.FormatUint(maxAG, 10),
+		fmt.Sprintf("%.2f", meanAG),
 		strconv.FormatUint(finish.gamesOver, 10),
 		strconv.FormatUint(finish.gamesFailed, 10),
 		strconv.FormatUint(finish.clientsStarted, 10),

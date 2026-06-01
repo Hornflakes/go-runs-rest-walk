@@ -3,17 +3,17 @@ package gameloop
 import "time"
 
 const (
-	PlayerWidth  = 64
-	PlayerHeight = 64
-	BulletWidth  = 8
-	BulletHeight = 2
+	PlayerWidth  = 100
+	PlayerHeight = 100
+	BulletWidth  = 35
+	BulletHeight = 3
 )
 
 const (
-	Player0SpawnX     = 1024
-	Player1SpawnX     = -1024
-	Player0FireRateMs = 128
-	Player1FireRateMs = 256
+	Player0SpawnX     = 2500
+	Player1SpawnX     = -2500
+	Player0FireRateMs = 180
+	Player1FireRateMs = 300
 )
 
 var (
