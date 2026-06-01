@@ -84,12 +84,17 @@ func CreateReadyMessage(enemyId uint64) SocketMessage {
 	}
 }
 
-func CreateWinnerMessage(gameFrameStats *stats.GameFrameStats) SocketMessage {
+func CreateWinnerMessage(winnerId uint64, gameFrameStats *stats.GameFrameStats) SocketMessage {
 	return SocketMessage{
 		Type: websocket.TextMessage,
 		Message: Message{
 			Type: GameOver,
-			Msg:  fmt.Sprintf("winner(%d)=%s", stats.ActiveGames, gameFrameStats),
+			Msg: fmt.Sprintf(
+				"winner=%d histogram=%s active_games=%d",
+				winnerId,
+				gameFrameStats,
+				stats.ActiveGames,
+			),
 		},
 	}
 }

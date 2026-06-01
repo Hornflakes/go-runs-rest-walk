@@ -28,7 +28,7 @@ func TestCreateMessageTypes(t *testing.T) {
 		{"Hello", CreateHelloMessage(3).Message.Type, Hello},
 		{"Ready", CreateReadyMessage(7).Message.Type, Ready},
 		{"GameOn", CreateSocketMessage(GameOn).Message.Type, GameOn},
-		{"GameOver winner", CreateWinnerMessage(stats.NewGameFrameStats()).Message.Type, GameOver},
+		{"GameOver winner", CreateWinnerMessage(0, stats.NewGameFrameStats()).Message.Type, GameOver},
 		{"GameOver loser", CreateLoserMessage().Message.Type, GameOver},
 	}
 
@@ -70,13 +70,13 @@ func TestCreateWinnerMessage(t *testing.T) {
 	gfs.AddDeltaTime(16_000)
 	gfs.AddDeltaTime(18_000)
 
-	msg := CreateWinnerMessage(gfs).Message
+	msg := CreateWinnerMessage(0, gfs).Message
 
 	if got, want := msg.Type, GameOver; got != want {
 		t.Errorf("Type = %d, want %d", got, want)
 	}
 
-	if got, want := msg.Msg, "winner(0)=1,1,0,0,0,0,0,0"; got != want {
+	if got, want := msg.Msg, "winner=0 histogram=1,1,0,0,0,0,0,0 active_games=0"; got != want {
 		t.Errorf("Msg = %q, want %q", got, want)
 	}
 }

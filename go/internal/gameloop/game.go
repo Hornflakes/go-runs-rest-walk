@@ -154,7 +154,7 @@ func (g *Game) Run() {
 			loserSocket := g.getPlayerSocket(loser)
 			winnerId = winnerSocket.PlayerId()
 
-			winnerSocket.Out() <- server.CreateWinnerMessage(g.stats)
+			winnerSocket.Out() <- server.CreateWinnerMessage(winnerId, g.stats)
 			loserSocket.Out() <- server.CreateLoserMessage()
 
 			_ = winnerSocket.Close()
@@ -172,11 +172,12 @@ func (g *Game) Run() {
 	}
 
 	log.Milestone("game over", fmt.Sprintf(
-		"winner=%d ticks=%d elapsed=%s bullets=%d histogram=%s",
+		"winner=%d histogram=%s active_games=%d ticks=%d elapsed=%s bullets=%d",
 		winnerId,
+		g.stats,
+		stats.ActiveGames,
 		ticks,
 		g.clock.Now().Sub(tickStartTime),
 		len(g.bullets),
-		g.stats,
 	))
 }

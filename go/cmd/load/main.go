@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -121,7 +122,10 @@ func playOneGame(ctx context.Context, url string, fireIntervalTime time.Duration
 			}()
 
 		case server.GameOver:
-			gamesOver.Add(1)
+			if strings.HasPrefix(msg.Msg, "winner=") && strings.Contains(msg.Msg, "histogram=") {
+				fmt.Println(msg.Msg)
+				gamesOver.Add(1)
+			}
 			return nil
 		}
 	}
