@@ -2,211 +2,245 @@
 
 ## Repos
 
-| Role                      | Path                                                                       |
-| ------------------------- | -------------------------------------------------------------------------- |
-| **Implement**             | `go-runs-rest-walk` — `github.com/hornflakes/go-runs-rest-walk`, Go 1.26.3 |
-| **Reference (read only)** | `../tyrone-biggums`                                                        |
-| **Default port**          | 37373, path `/`                                                            |
+| Role                      | Path                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| **Implement**             | `go-runs-rest-walk` — `github.com/hornflakes/go-runs-rest-walk`                            |
+| **Reference (read only)** | `../tyrone-biggums` — peek for ideas only; do not copy wire names or winner format blindly |
+| **Default port**          | 37373, path `/`                                                                            |
 
 Attribution: inspired by tyrone-biggums; own implementation; cite in thesis.
 
 ---
 
-## Done
+## Current focus: TypeScript server
 
-- Go game server (pair → ready → 60 Hz loop → GameOver + histogram)
-- `cmd/bot` — single-client dev / smoke test
-- `cmd/load` — N connections, stagger, fire, heartbeats, `clients_started` / `clients_done` / `games_failed`
-- `cmd/load` — prints winner lines on stdout (`fmt.Println`); `gamesOver` counts winners only
-- Disconnect + context (ready phase), `GameQueue.Stop()`, safe sleep
-- **`scripts/load-parse-results/`** — parse `.res` → `{run_id}-rolling.csv` + append `results/runs.csv`
-- **`scripts/benchmark.py`** — plot `*-rolling.csv` → PNG (`--x window_end` default, `--x active_games` for tyrone load curve)
-- End-to-end smoke: capture → parse → plot verified (e.g. `go-N100-G20-run1`)
+Port **this repo’s Go server** to TypeScript. Use **callback-style** I/O (event listeners + tick timer), not RxJS.
+
+| Decision        | Choice                                                                                |
+| --------------- | ------------------------------------------------------------------------------------- |
+| Location        | `ts/` at repo root                                                                    |
+| Runtime         | Node.js + [`ws`](https://github.com/websockets/ws)                                    |
+| Source of truth | `go/internal/server`, `go/internal/gameloop`, `go/internal/stats`                     |
+| Load harness    | **Go `cmd/load` only** — do **not** implement tyrone `game_player`                    |
+| Tyrone TS       | Optional peek (`callback-server`, `game-callback`) — **not** the wire/protocol source |
 
 ---
 
-## Wire protocol (actual)
+## Go baseline (done)
+
+Use as the reference implementation and comparison arm.
+
+- Game server: pair → ready → ~60 Hz loop → GameOver + per-game histogram
+- Tyrone-aligned simulation: `go/internal/gameloop/spec.go` (±2500 spawn, 100×100 players, 35×3 bullets, 180/300 ms fire, 16 ms tick target)
+- `cmd/bot` — two-client smoke
+- `cmd/load` — burst + stagger + winner stdout (`client.go`, `burst.go`, thin `main.go`)
+- Benchmark pipeline: tee `.res` → `scripts/load-parse-results` → `*-rolling.csv` + `runs.csv` → `scripts/benchmark.py`
+
+Example Go results (WSL, 1 core, burst, stagger 50, newspec): see `results-wsl-burst-1thread/runs.csv` (e.g. 10k → `bucket0_ratio_overall` ~0.85, `max_active_games` ~2655).
+
+---
+
+## Wire protocol (must match Go)
 
 JSON: `{"type": n, "msg"?: "..."}`
 
-| type | Name     | Notes                                                               |
-| ---- | -------- | ------------------------------------------------------------------- |
-| 0    | Hello    | Server → client                                                     |
-| 1    | Ready    | Handshake echo                                                      |
-| 2    | Shoot    | Client → server                                                     |
-| 3    | GameOver | Winner: `winner=<playerId> histogram=b0,b1,...,b7 active_games=<N>` |
-| 3    | GameOver | Loser: `"loser"` (not counted in benchmark)                         |
+| type | Name     | Notes                                                            |
+| ---- | -------- | ---------------------------------------------------------------- |
+| 0    | Hello    | Server → client; `msg`: `playerId=<id>`                          |
+| 1    | Ready    | Handshake; client echoes Ready after parsing `enemyId=`          |
+| 2    | GameOn   | Server → both when match starts                                  |
+| 3    | Shoot    | Client → server while playing                                    |
+| 4    | GameOver | Winner: `winner=<playerId> histogram=b0,...,b7 active_games=<N>` |
+| 4    | GameOver | Loser: `loser` (load ignores for `games_over`)                   |
 
-- `winner=<id>` — winning **player id**
-- `active_games` — global concurrent games at game end (not game number)
-- Tyrone reference used `winner(activeGames)___b0,...` (not implemented in parser; add if needed for reference files)
+**Not** tyrone’s `ReadyUp` / `Play` / `Fire` / `winner(N)___…` — load and parser expect **your** Go format.
 
-Constants: see `internal/gameloop/spec.go` (tick 16 ms, fire rates, etc.).
+Constants: mirror `go/internal/gameloop/spec.go` and histogram buckets in `go/internal/stats/stats.go`.
 
 ---
 
-## Benchmark philosophy (tyrone shooter model)
+## TypeScript implementation phases
 
-- **Load client** is the benchmark harness (like tyrone `game_player`).
-- **Histogram data** comes from **load stdout** (GameOver winner lines), teed to `.res` files via `2>&1 | tee`.
-- **Server:** run in a terminal and watch live — **no server log capture**.
-- **Same `cmd/load`** against Go and (later) TypeScript servers for fair comparison.
-- Per-game detail stays in `.res` (like tyrone `.res` / `.results`); no separate `games.csv`.
+Work through in order. Verify each phase before the next.
 
-**Winner line count:**
+| Phase | Build                                                                              | Verify                                       |
+| ----- | ---------------------------------------------------------------------------------- | -------------------------------------------- |
+| **0** | `ts/package.json`, TypeScript, `ws`, entry script, listen `37373`                  | Process starts; port open                    |
+| **1** | Message types + JSON parse/build (Go enum values)                                  | Unit test: `{"type":3}` → Shoot              |
+| **2** | WebSocket wrapper: text frames only, read/write                                    | Minimal connect / echo if helpful            |
+| **3** | Pairing server (mutex + waiting socket → `[s0,s1]` on channel)                     | Log or test: two clients paired              |
+| **4** | Ready handshake (`WaitForReady` equivalent, timeout)                               | `go run ./cmd/bot` × 2 terminals             |
+| **5** | Game loop: queue, physics, collisions, 16 ms tick pacing, `activeGames`, histogram | Winner line byte-for-byte compatible with Go |
+| **6** | Endurance run with **`cmd/load`**                                                  | `ts-N10000-G20-run1-load.res` → parse → plot |
 
-```text
-winner lines ≈ connections × games_per_conn ÷ 2
+Map Go files → TS modules (suggested):
+
+- `internal/server/message.go` → `ts/src/message.ts`
+- `internal/server/socket.go` + `server.go` → `ts/src/server/`
+- `internal/gameloop/*` → `ts/src/gameloop/`
+- `internal/stats/*` → `ts/src/stats/`
+- `cmd/server/main.go` → `ts/src/index.ts` (or `main.ts`)
+
+---
+
+## Benchmark harness (`cmd/load`)
+
+**Always use Go load** against whichever server is running (Go or TS). Same flags for both languages.
+
+### Commands
+
+```bash
+# Terminal 1 — TypeScript server (when ready)
+cd ts && npm run start   # document script in package.json
+
+# Terminal 2 — load (stdout → .res)
+cd go && go run ./cmd/load/ \
+  -connections 10000 -games 20 -stagger 50 -burst \
+  2>&1 | tee ../results/<folder>/ts-N10000-G20-run1-load.res
 ```
 
-(two clients per game; only the winner prints a line)
+Go comparison run (same flags, swap server):
+
+```bash
+cd go && taskset -c 0 go run ./cmd/server/
+cd go && taskset -c 0 go run ./cmd/load/ \
+  -connections 10000 -games 20 -stagger 50 -burst \
+  2>&1 | tee ../results/<folder>/go-N10000-G20-run1-load.res
+```
+
+### Load flags
+
+| Flag              | Default     | Meaning                                                      |
+| ----------------- | ----------- | ------------------------------------------------------------ |
+| `-connections`    | 10          | WebSocket clients (even N → ~N/2 concurrent games)           |
+| `-games`          | 0           | Games per client; `0` = until Ctrl+C; formal runs use **20** |
+| `-host`           | `127.0.0.1` | Server host                                                  |
+| `-port`           | `37373`     | Server port                                                  |
+| `-path`           | `/`         | WS path                                                      |
+| `-stagger`        | `50`        | Ms delay before client `id` starts (`id * stagger`)          |
+| `-fire`           | `200`       | Per-client shoot interval (ms); **ignored when `-burst`**    |
+| `-burst`          | `true`      | Global fire loop (tyrone-like); use for formal runs          |
+| `-burst-interval` | `5`         | Ms between shard ticks                                       |
+| `-burst-shards`   | `40`        | Shard count; client `id % shards`                            |
+
+Milestone line in `.res` (parsed into `runs.csv`):
+
+```text
+load | url=ws://127.0.0.1:37373/ connections=10000 games=20 stagger=50ms fire=burst-5ms-40shards
+```
+
+### Primary comparison run
+
+| Setting                                       | Value                                                 |
+| --------------------------------------------- | ----------------------------------------------------- |
+| Connections                                   | **10000**                                             |
+| Games per connection                          | **20**                                                |
+| Stagger                                       | **50** ms                                             |
+| Fire                                          | **burst** (5 ms, 40 shards)                           |
+| Simulation                                    | Tyrone-aligned `spec.go` constants                    |
+| CPU pinning (optional, document in lab notes) | `taskset -c 0` on server + load when comparing fairly |
+
+**Metrics to record:** `bucket0_ratio_overall`, `max_active_games`, `mean_active_games`, `games_failed` (must be 0 for a valid run).
+
+Winner lines on stdout only (load prints; server logs optional in terminal, no server tee).
+
+```text
+winner=<id> histogram=b0,...,b7 active_games=<N>
+```
+
+Approximate winner count: `connections × games_per_conn` (one line per completed game from winning client).
 
 ---
 
 ## Results layout
 
-Flat `results/` folder. Run-id-first names so `ls` groups artifacts:
-
 ```text
 results/
-  go-N100-G20-run1-load.res
-  go-N100-G20-run1-rolling.csv
+  go-N10000-G20-newspec-run1-load.res
+  go-N10000-G20-newspec-run1-rolling.csv
+  ts-N10000-G20-run1-load.res
+  ts-N10000-G20-run1-rolling.csv
   runs.csv
-  rolling.png              # default: --x window_end
-  rolling-load.png         # --x active_games
+  rolling-active-games.png    # benchmark.py --x active_games
+  rolling-over-time.png       # benchmark.py --x window_end (default)
 ```
 
-Naming: `{lang}-N{connections}-G{games_per_conn}-run{n}-load.res` → rolling replaces `-load.res` with `-rolling.csv`.
+Naming: `{lang}-N{connections}-G{games}-run{n}-load.res`  
+Parser sets `language` from prefix (`go` / `ts`).
 
----
-
-## Benchmark workflow
-
-### 1. Run capture
-
-**Formal / thesis runs** — fixed `-connections N` and `-games M`; exit when load prints `load finished`:
+### Parse
 
 ```bash
-# Terminal 1 — server (watch in terminal, no tee)
-cd go && go run ./cmd/server/main.go
-
-# Terminal 2 — load (2>&1 merges logger + winner lines for tee)
-cd go && go run ./cmd/load/main.go -connections 100 -games 20 -stagger 25 -fire 200 2>&1 \
-  | tee ../results/go-N100-G20-run1-load.res
+cd scripts && go run ./load-parse-results/main.go ../results/<folder>/ts-N10000-G20-run1-load.res
 ```
 
-**Dev** — `-games 0` and Ctrl+C when done watching.
+Outputs:
 
-Repeat **≥3 runs** per N+G (`run1`, `run2`, `run3`). N ladder e.g. 500 → 1k → 2k → 5k → 8k → 10k (stop when `games_failed` rises or `bucket0_ratio` collapses).
+- `{run_id}-rolling.csv` — columns: `window_end`, `active_games`, `bucket0_ratio`
+- append `runs.csv` — includes `max_active_games`, `mean_active_games`, etc.
 
-Per run note in thesis/lab book: OS, CPU/RAM, git commit, stagger, any anomalies.
-
-### 2. Parse
+### Plot
 
 ```bash
-cd scripts && go run ./load-parse-results/main.go ../results/go-N100-G20-run1-load.res
+cd scripts && python3 benchmark.py ../results/<folder> --x active_games
+python3 benchmark.py ../results/<folder> --x window_end
 ```
 
-**`scripts/load-parse-results/`** (Go, `package main`; module in `scripts/go.mod`)
-
-- Parse winner lines: `winner=(\d+) histogram=([\d,]+) active_games=(\d+)`
-- Parse `load | url=...` and `load finished | ...` for `runs.csv`
-- Strip ANSI from teed logger lines; ignore heartbeats for CSV output
-- Rolling requires `≥ window` winner lines (default window 100); `runs.csv` appended even if rolling fails
-
-**Output: `{run_id}-rolling.csv`** (every 100 games)
-
-```text
-window_end,active_games,bucket0_ratio
-```
-
-- `bucket0_ratio = sum(w0) / sum(w0..w7)` — **fraction 0–1**, formatted `%.2f`
-- `active_games` = mean of `active_games` from winner lines in the window
-
-**Output: append `results/runs.csv`** (one row per parse)
-
-```text
-run_id,language,connections,games_per_conn,run_number,url,stagger,fire,
-games_parsed,bucket0_ratio_overall,games_over,games_failed,clients_started,clients_done
-```
-
-### 3. Plot
-
-```bash
-cd scripts && py -3 benchmark.py ../results
-py -3 benchmark.py ../results --x active_games   # → rolling-load.png
-```
-
-**`scripts/benchmark.py`** (Python, matplotlib)
-
-| Output             | `--x`                  | Question answered                      |
-| ------------------ | ---------------------- | -------------------------------------- |
-| `rolling.png`      | `window_end` (default) | Tick quality **over run progress**     |
-| `rolling-load.png` | `active_games`         | Tyrone-style quality **vs load level** |
-
-Overlay: drop multiple `*-rolling.csv` in `results/` (later `go-...` + `ts-...`).
-
-**Optional summary plot (not implemented):** read `runs.csv` — X = `connections`, Y = median `bucket0_ratio_overall` across run1–3 at each N. One point per N for thesis saturation overview.
-
-### 4. CPU/RAM (optional, tyrone `measure`)
-
-During steady state, sample server + load PIDs (`pidstat` or copy tyrone `measure`).
-
-Separate from histogram pipeline; supports “loader vs server CPU” narrative.
-
-### 5. Profiling (optional)
-
-- `perf` + FlameGraph on server PID at low / mid / saturated N (not pprof)
-- Linux/WSL for published numbers
+Overlay Go + TS rolling files in one folder for one chart.
 
 ---
 
-## Go vs TypeScript (later)
+## Environment notes (document per run)
 
-1. Port TS server to same spec + wire format.
-2. Same load flags, same N+G ladder, same scripts.
-3. Compare `go-N...-rolling.csv` vs `ts-N...-rolling.csv` on same plot axes.
-4. Document threats: event-loop timers, ms vs µs clocks, same-host loader limits.
+Record in thesis / lab book, not in code:
 
----
+- OS (WSL / Windows), `taskset` if used
+- git commit
+- `stagger`, `fire` / burst settings
+- anomalies (frozen heartbeat bursts under saturation = backlog, not necessarily failure)
 
-## Code conventions
+### Threats to mention when writing up
 
-- Ignored returns: bare `fn()` when dropping all values.
-- `_ = fn()` only for best-effort close/shutdown paths.
-- Hot path (dial, read, write, parse): check `err`.
-
----
-
-## Todo checklist
-
-- [x] `cmd/load` — print GameOver winner line on stdout
-- [x] `scripts/load-parse-results` → `{run_id}-rolling.csv` + `runs.csv`
-- [x] `scripts/benchmark.py` — rolling plots (`window_end` + `active_games`)
-- [x] End-to-end pipeline smoke
-- [ ] Go N ladder until saturation (3× per step)
-- [ ] Optional: summary plot from `runs.csv`
-- [ ] Optional: CPU/RAM (`measure` / pidstat)
-- [ ] Optional: perf + FlameGraph
-- [ ] TypeScript server + Go vs TS overlay plots
+- Node event-loop timer vs Go sleep loop (tick pacing)
+- Same-machine `cmd/load` competing for CPU with server
+- `active_games` on X-axis for plots, not raw connection count
 
 ---
 
-## Out of scope / not doing
+## Out of scope
 
-- tyrone `test_client` / chat latency pipeline
-- `games.csv` (`.res` is raw per-game archive)
-- Auto-sweep runner (until manual runs are painful)
-- Old PLAN step table / pprof checklist
-- Server log capture (watch server in terminal only)
+- tyrone Rust `game_player` / TS `game_player` in `typescript/src/test/`
+- RxJS server variant
+- tyrone winner format `winner(N)___…`
+- Browser client / `browser-index.ts`
+- Server log capture to `.res` (watch server terminal only)
+- `games.csv` (`.res` is the archive)
+- Auto-sweep runner until manual runs are painful
+
+### Deferred (after TS port)
+
+- `pidstat` / CPU-RAM sampling (tyrone `measure` style)
+- `perf` + FlameGraph
+- Summary plot from `runs.csv` (connections vs median bucket0)
+
+---
+
+## Agent instructions
+
+- Implement only in `go-runs-rest-walk`.
+- Port from **Go**; peek `../tyrone-biggums` only when stuck on callback WS patterns.
+- Do not change load winner-line format or parser regex without updating `scripts/load-parse-results`.
+- Formal TS run: **`ts-N10000-G20-run1`** with load flags in table above.
 
 ---
 
 ## New chat starter
 
 ```
-Benchmark work in go-runs-rest-walk. Load .res → rolling CSV + runs.csv → plots. @.cursor/PLAN.md
-Reference ../tyrone-biggums for game_player + go.N.res.csv shape.
-Parser: scripts/load-parse-results (Go). Plots: scripts/benchmark.py (Python).
-Next: Go N saturation sweep, then TypeScript server.
+TypeScript server port in go-runs-rest-walk/ts/ (Node + ws, callback style).
+Match Go wire protocol and spec.go; use go/cmd/load for benchmarks.
+Reference: go/internal/* (source of truth), tyrone-biggums/typescript (peek only).
+Parse/plot: scripts/load-parse-results, scripts/benchmark.py.
+Target run: ts-N10000-G20, -connections 10000 -games 20 -stagger 50 -burst.
+@.cursor/PLAN.md
 ```
