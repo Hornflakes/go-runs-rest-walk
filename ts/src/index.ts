@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 import * as logger from './logger.js';
 import { createServer } from './server.js';
 import { Logger } from './logger.js';
+import { waitForReady } from './wait-for-ready.js';
 
 const httpServer = createHttpServer();
 const wss = new WebSocketServer({ server: httpServer, path: '/' });
@@ -13,6 +14,19 @@ srv.onPair = (pair) => {
     const [s0, s1] = pair;
     const log = new Logger(s0.playerId, s1.playerId);
     log.milestone('websockets paired', '');
+
+    const ready = waitForReady(s0, s1);
+
+    ready.promise.then((ok) => {
+        if (!ok) {
+            log.warn('websockets ready handshake failed', '');
+            s0.close();
+            s1.close();
+            return;
+        }
+
+        log.milestone('websockets ready handshake ok', '');
+    });
 };
 
 wss.on('connection', (ws, req) => {
