@@ -4,6 +4,9 @@ import * as logger from './logger.js';
 import { createServer } from './server.js';
 import { Logger } from './logger.js';
 import { waitForReady } from './wait-for-ready.js';
+import { runGame } from './game.js';
+
+const verbose = process.argv.includes('--verbose');
 
 const httpServer = createHttpServer();
 const wss = new WebSocketServer({ server: httpServer, path: '/' });
@@ -26,6 +29,7 @@ srv.onPair = (pair) => {
         }
 
         log.milestone('websockets ready handshake ok', '');
+        runGame(s0, s1, verbose);
     });
 };
 
