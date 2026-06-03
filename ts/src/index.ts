@@ -1,10 +1,10 @@
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
-import * as logger from './logger.js';
-import { createServer } from './server.js';
-import { Logger } from './logger.js';
-import { waitForReady } from './wait-for-ready.js';
-import { runGame } from './game.js';
+import * as logger from './logger/index.js';
+import { Logger } from './logger/index.js';
+import { waitForReady } from './gameloop/wait-for-ready.js';
+import { runGame } from './gameloop/index.js';
+import { createServer } from './server/index.js';
 
 const verbose = process.argv.includes('--verbose');
 
