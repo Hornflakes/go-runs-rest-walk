@@ -1,13 +1,11 @@
 import { Socket } from '../server/socket.js';
 import { createReadyMessage, MessageType } from '../server/message.js';
+import { DisconnectPollMs, ReadyTimeoutMs } from './spec.js';
 
-const READY_TIMEOUT_MS = 30_000;
-const DISCONNECT_POLL_MS = 50;
-
-export interface ReadyHandle {
+export type ReadyHandle = {
     promise: Promise<boolean>;
     cancel: () => void;
-}
+};
 
 export function waitForReady(s0: Socket, s1: Socket): ReadyHandle {
     let cancelled = false;
@@ -67,14 +65,14 @@ export function waitForReady(s0: Socket, s1: Socket): ReadyHandle {
             cleanup();
             resolve(false);
         }
-    }, DISCONNECT_POLL_MS);
+    }, DisconnectPollMs);
 
     timeoutHandle = setTimeout(() => {
         if (!cancelled) {
             cleanup();
             resolve(false);
         }
-    }, READY_TIMEOUT_MS);
+    }, ReadyTimeoutMs);
 
     function cancel(): void {
         if (!cancelled) {

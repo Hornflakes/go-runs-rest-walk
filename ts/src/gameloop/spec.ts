@@ -18,3 +18,6 @@ export const Player1Dir: Vector2D = [1, 0];
 export const BulletSpeedMs = 1.0;
 export const TickTargetMicros = 16_000;
 export const MicrosPerMs = 1000;
+
+export const ReadyTimeoutMs = 30_000;
+export const DisconnectPollMs = 50;

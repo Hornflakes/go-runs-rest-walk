@@ -23,18 +23,30 @@ srv.onPair = (pair) => {
     ready.promise.then((ok) => {
         if (!ok) {
             log.warn('websockets ready handshake failed', '');
+
             s0.close();
             s1.close();
             return;
         }
 
         log.milestone('websockets ready handshake ok', '');
+
         runGame(s0, s1, verbose);
     });
 };
 
 wss.on('connection', (ws, req) => {
     srv.handleConnection(ws, req);
+});
+
+wss.on('wsClientError', (err, _socket, req) => {
+    const addr = req.socket.remoteAddress ?? '';
+    logger.hardError('websocket upgrade failed', `addr=${addr} err=${err}`);
+});
+
+httpServer.on('error', (err) => {
+    logger.hardError('server listen failed', `addr=:37373 err=${err}`);
+    process.exit(1);
 });
 
 httpServer.listen(37373, () => {

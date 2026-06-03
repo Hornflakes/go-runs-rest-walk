@@ -6,10 +6,10 @@ import { IncomingMessage } from 'http';
 
 export type Pair = [Socket, Socket];
 
-export interface Server {
+export type Server = {
     onPair: ((pair: Pair) => void) | null;
     handleConnection(ws: WebSocket, req: IncomingMessage): void;
-}
+};
 
 function socketAlive(s: Socket | null): boolean {
     return s !== null && !s.closed && !s.disconnected;

@@ -6,10 +6,10 @@ export enum MessageType {
     GameOver,
 }
 
-export interface Message {
+export type Message = {
     type: MessageType;
     msg?: string;
-}
+};
 
 export function unmarshalMessage(data: string): Message {
     return JSON.parse(data) as Message;

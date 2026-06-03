@@ -1,10 +1,10 @@
 import { Socket } from '../server/socket.js';
 import { Message } from '../server/message.js';
 
-export interface QueueMessage {
+export type QueueMessage = {
     from: number;
     message: Message;
-}
+};
 
 export class Queue {
     private messages: QueueMessage[] = [];
