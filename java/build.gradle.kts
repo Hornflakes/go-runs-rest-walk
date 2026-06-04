@@ -22,6 +22,7 @@ dependencies {
     implementation("org.eclipse.jetty.websocket:jetty-websocket-jetty-server:12.1.10")
     implementation("org.eclipse.jetty.websocket:jetty-websocket-jetty-api:12.1.10")
     implementation("org.slf4j:slf4j-nop:2.0.17")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
 }
 
 tasks.withType<JavaCompile> {

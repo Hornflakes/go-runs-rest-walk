@@ -1,6 +1,7 @@
 package com.hornflakes.gorunsrestwalk;
 
 import com.hornflakes.gorunsrestwalk.logger.Log;
+import com.hornflakes.gorunsrestwalk.server.Message;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
