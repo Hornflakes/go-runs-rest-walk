@@ -1,5 +1,6 @@
 package com.hornflakes.gorunsrestwalk;
 
+import com.hornflakes.gorunsrestwalk.gameloop.WaitForReady;
 import com.hornflakes.gorunsrestwalk.logger.Log;
 import com.hornflakes.gorunsrestwalk.logger.Logger;
 import com.hornflakes.gorunsrestwalk.server.PairingServer;
@@ -16,6 +17,21 @@ public class Main {
         pairing.setOnPair((s0, s1) -> {
             Logger log = Logger.forPair(s0.playerId(), s1.playerId());
             log.logMilestone("websockets paired", "");
+
+            Thread.ofVirtual().start(() -> {
+                boolean ok = WaitForReady.await(s0, s1);
+
+                if (!ok) {
+                    log.logWarn("websockets ready handshake failed", "");
+                    s0.close();
+                    s1.close();
+                    return;
+                }
+
+                log.logMilestone("websockets ready handshake ok", "");
+
+                // Phase 5: game loop goes here
+            });
         });
 
         Server server = new Server();
