@@ -2,19 +2,22 @@ package com.hornflakes.gorunsrestwalk;
 
 import com.hornflakes.gorunsrestwalk.logger.Log;
 import com.hornflakes.gorunsrestwalk.logger.Logger;
-import com.hornflakes.gorunsrestwalk.server.Message;
+import com.hornflakes.gorunsrestwalk.server.PairingServer;
 import com.hornflakes.gorunsrestwalk.server.Socket;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 public class Main {
 
-    private static final AtomicLong nextPlayerId = new AtomicLong(0);
-
     public static void main(String[] args) throws Exception {
+        PairingServer pairing = new PairingServer();
+
+        pairing.setOnPair((s0, s1) -> {
+            Logger log = Logger.forPair(s0.playerId(), s1.playerId());
+            log.logMilestone("websockets paired", "");
+        });
+
         Server server = new Server();
 
         ServerConnector connector = new ServerConnector(server);
@@ -23,8 +26,8 @@ public class Main {
 
         WebSocketUpgradeHandler wsHandler = WebSocketUpgradeHandler.from(server, container -> {
             container.addMapping("/", (req, resp, cb) -> {
-                Socket socket = new Socket();
-                socket.setPlayerId(nextPlayerId.incrementAndGet());
+                Socket socket = pairing.createSocket();
+                socket.setOnReady(() -> pairing.register(socket));
                 return socket;
             });
         });

@@ -21,6 +21,7 @@ public class Socket {
     private final AtomicBoolean disconnected = new AtomicBoolean(false);
     private volatile boolean closed;
     private Thread writeThread;
+    private Runnable onReady;
 
     public long playerId() { return playerId; }
     public void setPlayerId(long id) { this.playerId = id; }
@@ -29,6 +30,7 @@ public class Socket {
     public boolean closed() { return closed; }
     public BlockingQueue<Message> in() { return in; }
     public BlockingQueue<Message> out() { return out; }
+    public void setOnReady(Runnable onReady) { this.onReady = onReady; }
 
     @OnWebSocketOpen
     public void onOpen(Session session) {
@@ -65,6 +67,10 @@ public class Socket {
 
         send(Message.createHello(playerId));
         Log.info("websocket connected", Logger.playerWithAddr(playerId, remoteAddr));
+
+        if (onReady != null) {
+            onReady.run();
+        }
     }
 
     @OnWebSocketMessage
