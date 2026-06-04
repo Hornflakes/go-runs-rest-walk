@@ -1,5 +1,6 @@
 package com.hornflakes.gorunsrestwalk;
 
+import com.hornflakes.gorunsrestwalk.gameloop.Game;
 import com.hornflakes.gorunsrestwalk.gameloop.WaitForReady;
 import com.hornflakes.gorunsrestwalk.logger.Log;
 import com.hornflakes.gorunsrestwalk.logger.Logger;
@@ -12,6 +13,8 @@ import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        boolean verbose = java.util.Arrays.asList(args).contains("--verbose");
+
         PairingServer pairing = new PairingServer();
 
         pairing.setOnPair((s0, s1) -> {
@@ -30,7 +33,7 @@ public class Main {
 
                 log.logMilestone("websockets ready handshake ok", "");
 
-                // Phase 5: game loop goes here
+                new Game(s0, s1, verbose).run();
             });
         });
 
