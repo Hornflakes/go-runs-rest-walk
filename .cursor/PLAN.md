@@ -14,21 +14,22 @@ Attribution: inspired by tyrone-biggums; own implementation; cite in thesis.
 
 ## Current focus: Java server
 
-Port **this repo’s Go server** to Java. Use **Java 25 virtual threads** + **embedded Jetty 12 WebSocket** + **blocking game loop** (same shape as Go, not Netty/reactive).
+Port **this repo’s Go server** to **Java + Netty**: same game, same wire protocol, same load harness and metrics. Use **Java 25**, **Netty 4** (HTTP upgrade + WebSocket on `/`), and a **blocking ~60 Hz game loop** on virtual threads (same server phases as Go: pair → ready → queue → tick → GameOver).
 
-| Decision        | Choice                                                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| Location        | `java/` at repo root                                                                                          |
-| Build           | **Gradle**                                                                                                    |
-| Language        | **Java 25** (virtual threads: `Thread.startVirtualThread` / virtual-thread executor)                          |
-| HTTP / WS       | **Jetty 12** embedded server + WebSocket (gorilla / `ws` analogue)                                            |
-| Concurrency     | Virtual thread per paired game; blocking tick loop like `gameloop.Run()`                                      |
-| Packages        | **`com.hornflakes.gorunsrestwalk.*`** — `.server`, `.gameloop`, `.stats`, `.logger` (mirrors Go `internal/*`) |
-| Logging         | **Custom colored logger** — same levels/events as Go (`milestone`, `info`, `warn`, `softError`, `hardError`)  |
-| Source of truth | `go/internal/server`, `go/internal/gameloop`, `go/internal/stats`, `go/internal/logger`                       |
-| Load harness    | **Go `cmd/load` only** — do **not** implement tyrone `game_player`                                            |
-| Listen          | **Port 37373 only** (no explicit `0.0.0.0`; same as current TS)                                               |
-| Tyrone          | Optional peek only — **not** wire/protocol source                                                             |
+| Decision        | Choice                                                                                                                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Location        | `java/` at repo root                                                                                                              |
+| Build           | **Gradle**                                                                                                                        |
+| Language        | **Java 25** (virtual threads for pairing, ready, queue reader, game loop)                                                         |
+| HTTP / WS       | **Netty 4** — `ServerBootstrap`, WebSocket upgrade, text frames only (gorilla / `ws` analogue)                                    |
+| Concurrency     | Netty event loop for accept/I/O framing; virtual threads for pair dispatch, per-socket outbound drain, queue reader, `Game.run()` |
+| WS idle timeout | **None** during stagger (match Go — clients may wait a long time before pairing)                                                  |
+| Packages        | **`com.hornflakes.gorunsrestwalk.*`** — `.server`, `.gameloop`, `.stats`, `.logger` (mirrors Go `internal/*`)                     |
+| Logging         | **Custom colored logger** — same levels/events as Go (`milestone`, `info`, `warn`, `softError`, `hardError`)                      |
+| Source of truth | `go/internal/server`, `go/internal/gameloop`, `go/internal/stats`, `go/internal/logger`                                           |
+| Load harness    | **Go `cmd/load` only** — do **not** implement tyrone `game_player`                                                                |
+| Listen          | **Port 37373 only** (no explicit `0.0.0.0`; same as current TS)                                                                   |
+| Tyrone          | Optional peek only — **not** wire/protocol source                                                                                 |
 
 ---
 
@@ -87,32 +88,32 @@ winner=<id> histogram=b0,...,b7 active_games=<N>
 
 Work through in order. Verify each phase before the next.
 
-| Phase | Build                                                                                                                                    | Verify                                         |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **0** | `java/` Gradle project, Java 25 toolchain, Jetty 12, `com.hornflakes.gorunsrestwalk.logger` (Go/TS parity), entry `Main`, listen `37373` | Process starts; colored `server listening` log |
-| **1** | Message types + JSON parse/build (Go enum values)                                                                                        | Unit test: `{"type":3}` → Shoot                |
-| **2** | WebSocket session wrapper: Jetty WS, text frames only, send/receive + Go-equivalent socket logs                                          | Connect smoke if helpful                       |
-| **3** | Pairing server (synchronized + waiting socket → pair callback)                                                                           | Log or test: two clients paired                |
-| **4** | Ready handshake (`WaitForReady` equivalent, timeout)                                                                                     | `go run ./cmd/bot` × 2 terminals               |
-| **5** | Game loop: queue, physics, collisions, 16 ms tick pacing, `activeGames`, histogram                                                       | Winner line byte-for-byte compatible with Go   |
-| **6** | Endurance run with **`cmd/load`**                                                                                                        | `java-N10000-G20-run1-load.res` → parse → plot |
+| Phase | Build                                                                                                                                   | Verify                                         |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **0** | `java/` Gradle project, Java 25 toolchain, Netty 4, `com.hornflakes.gorunsrestwalk.logger` (Go/TS parity), entry `Main`, listen `37373` | Process starts; colored `server listening` log |
+| **1** | Message types + JSON parse/build (Go enum values)                                                                                       | Unit test: `{"type":3}` → Shoot                |
+| **2** | WebSocket channel handler: Netty WS, text frames only, send/receive + Go-equivalent socket logs                                         | Connect smoke if helpful                       |
+| **3** | Pairing server (synchronized + waiting socket → pair callback)                                                                          | Log or test: two clients paired                |
+| **4** | Ready handshake (`WaitForReady` equivalent, timeout)                                                                                    | `go run ./cmd/bot` × 2 terminals               |
+| **5** | Game loop: queue, physics, collisions, 16 ms tick pacing, `activeGames`, histogram                                                      | Winner line byte-for-byte compatible with Go   |
+| **6** | Endurance run with **`cmd/load`**                                                                                                       | `java-N10000-G20-run1-load.res` → parse → plot |
 
 Map Go → Java (suggested):
 
-| Go                                        | Java                                                                                         |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `cmd/server/main.go`                      | `com.hornflakes.gorunsrestwalk.Main`                                                         |
-| `internal/server/message.go`              | `com.hornflakes.gorunsrestwalk.server.Message` (+ helpers)                                   |
-| `internal/server/socket.go` + `server.go` | `com.hornflakes.gorunsrestwalk.server.Socket`, `com.hornflakes.gorunsrestwalk.server.Server` |
-| `internal/gameloop/*`                     | `com.hornflakes.gorunsrestwalk.gameloop.*`                                                   |
-| `internal/stats/*`                        | `com.hornflakes.gorunsrestwalk.stats.*`                                                      |
-| `internal/logger/*`                       | `com.hornflakes.gorunsrestwalk.logger.*`                                                     |
+| Go                                        | Java                                                                                                |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `cmd/server/main.go`                      | `com.hornflakes.gorunsrestwalk.Main`                                                                |
+| `internal/server/message.go`              | `com.hornflakes.gorunsrestwalk.server.Message` (+ helpers)                                          |
+| `internal/server/socket.go` + `server.go` | `com.hornflakes.gorunsrestwalk.server.Socket`, `com.hornflakes.gorunsrestwalk.server.PairingServer` |
+| `internal/gameloop/*`                     | `com.hornflakes.gorunsrestwalk.gameloop.*`                                                          |
+| `internal/stats/*`                        | `com.hornflakes.gorunsrestwalk.stats.*`                                                             |
+| `internal/logger/*`                       | `com.hornflakes.gorunsrestwalk.logger.*`                                                            |
 
 ### Phase 0 Gradle sketch
 
 - `settings.gradle.kts`: `rootProject.name = "go-runs-rest-walk"`
 - Java 25 via toolchain in `build.gradle.kts`
-- Dependencies (Jetty 12): `jetty-server`, Jetty 12 WebSocket server module (BOM-aligned versions)
+- Dependencies (Netty 4): `io.netty:netty-all` (or modular `netty-handler`, `netty-codec-http`, `netty-codec-http2` as needed) — pin version in `build.gradle.kts`
 - Run task: `./gradlew run` → `com.hornflakes.gorunsrestwalk.Main`
 - **`com.hornflakes.gorunsrestwalk.logger`**: port `go/internal/logger` + `ts/src/logger` — static helpers (`info`, `warn`, `milestone`, `softError`, `hardError`, `player`, `playerWithAddr`, `pairPrefix`) and pair-scoped `Logger` class; ANSI colors; `event | detail` format
 - **`Main`**: on bind, log `server listening` | `addr=:37373` via logger (smoke that phase 0 logger works)
@@ -249,7 +250,7 @@ Overlay Go + TS + Java rolling files in one folder.
 
 Record in thesis / lab book:
 
-- OS (WSL / Windows / Linux), Java version, Jetty version
+- OS (WSL / Windows / Linux), Java version, Netty version
 - `taskset` if used
 - git commit
 - load flags (`stagger`, burst settings)
@@ -257,7 +258,8 @@ Record in thesis / lab book:
 
 ### Threats to mention when writing up
 
-- Virtual-thread scheduling + Jetty I/O vs Go goroutines + gorilla
+- Netty event-loop I/O + virtual-thread game scheduling vs Go goroutines + gorilla
+- Netty outbound writes must respect channel event-loop thread confinement
 - `Thread.sleep` / nanosleep tick pacing vs Go `time.Sleep`
 - Same-machine `cmd/load` competing for CPU with server
 - `active_games` on X-axis for plots, not raw connection count
@@ -269,7 +271,7 @@ Record in thesis / lab book:
 - tyrone Rust / TS `game_player`
 - RxJS server variant
 - tyrone winner format `winner(N)___…`
-- Netty, Spring, reactive stacks
+- Spring, WebFlux, other HTTP stacks
 - Browser client
 - Server log capture to `.res`
 - `games.csv`
@@ -297,8 +299,9 @@ Record in thesis / lab book:
 ## New chat starter
 
 ```
-Java server port in go-runs-rest-walk/java/ (Java 25, Gradle, Jetty 12 WS, virtual threads).
-Match Go wire protocol and spec.go; use go/cmd/load for benchmarks.
+Java server port in go-runs-rest-walk/java/ (Java 25, Gradle, Netty 4 WebSocket, virtual threads).
+Same game and wire protocol as Go; port server phases from go/internal/*.
+Use go/cmd/load for benchmarks.
 Packages: com.hornflakes.gorunsrestwalk.server, .gameloop, .stats, .logger.
 Reference: go/internal/* (source of truth), ts/ (sibling port), tyrone-biggums (peek only).
 Parse/plot: scripts/load-parse-results, scripts/benchmark.py.
