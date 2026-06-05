@@ -1,3 +1,5 @@
 results*
 dist
 node_modules
+.gradle
+build
