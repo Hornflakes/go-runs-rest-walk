@@ -1,5 +1,6 @@
 package com.hornflakes.gorunsrestwalk;
 
+import com.hornflakes.gorunsrestwalk.gameloop.WaitForReady;
 import com.hornflakes.gorunsrestwalk.logger.Logger;
 import com.hornflakes.gorunsrestwalk.server.Server;
 import com.hornflakes.gorunsrestwalk.server.WebSocketHandler;
@@ -28,6 +29,20 @@ public class Main {
         var srv = new Server(pair -> {
             var log = Logger.forPair(pair[0].playerId(), pair[1].playerId());
             log.milestone("websockets paired", "");
+
+            Thread.startVirtualThread(() -> {
+                boolean ok = WaitForReady.execute(pair[0], pair[1]);
+
+                if (!ok) {
+                    log.warn("websockets ready handshake failed", "");
+                    pair[0].close();
+                    pair[1].close();
+                    return;
+                }
+
+                log.milestone("websockets ready handshake ok", "");
+                // Phase 5: game loop
+            });
         });
 
         var bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
