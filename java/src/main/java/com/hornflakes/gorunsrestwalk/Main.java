@@ -1,19 +1,17 @@
 package com.hornflakes.gorunsrestwalk;
 
 import com.hornflakes.gorunsrestwalk.logger.Logger;
-import com.hornflakes.gorunsrestwalk.server.Message;
-import com.hornflakes.gorunsrestwalk.server.Socket;
+import com.hornflakes.gorunsrestwalk.server.Server;
 import com.hornflakes.gorunsrestwalk.server.WebSocketHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 public class Main {
 
@@ -27,10 +25,13 @@ public class Main {
             }
         }
 
-        var nextPlayerId = new AtomicLong(0);
+        var srv = new Server(pair -> {
+            var log = Logger.forPair(pair[0].playerId(), pair[1].playerId());
+            log.milestone("websockets paired", "");
+        });
 
-        var bossGroup = new NioEventLoopGroup(1);
-        var workerGroup = new NioEventLoopGroup();
+        var bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        var workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         try {
             var bootstrap = new ServerBootstrap();
@@ -43,12 +44,7 @@ public class Main {
                             pipeline.addLast(new HttpServerCodec());
                             pipeline.addLast(new HttpObjectAggregator(65536));
                             pipeline.addLast(new WebSocketServerProtocolHandler("/"));
-                            pipeline.addLast(new WebSocketHandler(socket -> {
-                                socket.setPlayerId(nextPlayerId.incrementAndGet());
-                                socket.send(Message.createHello(socket.playerId()));
-                                Logger.GLOBAL.info("websocket connected",
-                                        Logger.playerWithAddr(socket.playerId(), socket.remoteAddr()));
-                            }));
+                            pipeline.addLast(new WebSocketHandler(srv::registerSocket));
                         }
                     });
 
