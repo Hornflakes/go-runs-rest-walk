@@ -1,5 +1,6 @@
 package com.hornflakes.gorunsrestwalk;
 
+import com.hornflakes.gorunsrestwalk.gameloop.Game;
 import com.hornflakes.gorunsrestwalk.gameloop.WaitForReady;
 import com.hornflakes.gorunsrestwalk.logger.Logger;
 import com.hornflakes.gorunsrestwalk.server.Server;
@@ -26,6 +27,7 @@ public class Main {
             }
         }
 
+        boolean finalVerbose = verbose;
         var srv = new Server(pair -> {
             var log = Logger.forPair(pair[0].playerId(), pair[1].playerId());
             log.milestone("websockets paired", "");
@@ -41,7 +43,7 @@ public class Main {
                 }
 
                 log.milestone("websockets ready handshake ok", "");
-                // Phase 5: game loop
+                new Game(pair[0], pair[1], finalVerbose).run();
             });
         });
 
