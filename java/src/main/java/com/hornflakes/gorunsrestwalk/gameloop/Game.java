@@ -29,6 +29,80 @@ public class Game {
         this.verbose = verbose;
     }
 
+    public void run() {
+        start();
+        ActiveGames.add();
+
+        try {
+            Logger log = Logger.forPair(sockets[0].playerId(), sockets[1].playerId());
+
+            sockets[0].send(new Message(Message.GAME_ON));
+            sockets[1].send(new Message(Message.GAME_ON));
+
+            log.logInfo("game on", "");
+
+            long winnerId = 0;
+            int ticks = 0;
+            Instant tickStartTime = Instant.now();
+
+            long lastLoopTime = System.nanoTime() / 1000;
+
+            while (true) {
+                ticks++;
+
+                long startTime = System.nanoTime() / 1000;
+                long deltaTime = startTime - lastLoopTime;
+
+                if (ticks > 1) {
+                    stats.addDeltaTime(deltaTime);
+                }
+
+                updateStateFromMessageQueue(log);
+                updateBulletsPositions(deltaTime);
+                checkBulletBulletCollisions();
+
+                Player loser = checkBulletPlayerCollisions();
+                if (loser != null) {
+                    Player winner = getOtherPlayer(loser);
+                    Socket winnerSocket = getPlayerSocket(winner);
+                    Socket loserSocket = getPlayerSocket(loser);
+                    winnerId = winnerSocket.playerId();
+
+                    winnerSocket.send(Message.createWinner(winnerId, stats.toString(), ActiveGames.get()));
+                    loserSocket.send(Message.createLoser());
+
+                    winnerSocket.close();
+                    loserSocket.close();
+
+                    break;
+                }
+
+                long nowTime = System.nanoTime() / 1000;
+                long sleepUs = Spec.TICK_TARGET_MICROS - (nowTime - startTime);
+                if (sleepUs > 0) {
+                    Thread.sleep(Duration.ofNanos(sleepUs * 1000));
+                }
+                lastLoopTime = startTime;
+            }
+
+            Duration elapsed = Duration.between(tickStartTime, Instant.now());
+            String elapsedStr = String.format("%.7fs", elapsed.toNanos() / 1_000_000_000.0);
+            log.logMilestone("game over", String.format(
+                "winner=%d histogram=%s active_games=%d ticks=%d elapsed=%s bullets=%d",
+                winnerId,
+                stats,
+                ActiveGames.get(),
+                ticks,
+                elapsedStr,
+                bullets.size()
+            ));
+        } catch (InterruptedException _) {
+        } finally {
+            stop();
+            ActiveGames.remove();
+        }
+    }
+
     private void start() {
         queue = new Queue();
         queue.start(sockets[0], sockets[1]);
@@ -101,79 +175,5 @@ public class Game {
     private Player getOtherPlayer(Player player) {
         if (player == players[0]) return players[1];
         return players[0];
-    }
-
-    public void run() {
-        start();
-        ActiveGames.add();
-
-        try {
-            Logger log = Logger.forPair(sockets[0].playerId(), sockets[1].playerId());
-
-            sockets[0].send(new Message(Message.GAME_ON));
-            sockets[1].send(new Message(Message.GAME_ON));
-
-            log.logInfo("game on", "");
-
-            long winnerId = 0;
-            int ticks = 0;
-            Instant tickStartTime = Instant.now();
-
-            long lastLoopTime = System.nanoTime() / 1000;
-
-            while (true) {
-                ticks++;
-
-                long startTime = System.nanoTime() / 1000;
-                long deltaTime = startTime - lastLoopTime;
-
-                if (ticks > 1) {
-                    stats.addDeltaTime(deltaTime);
-                }
-
-                updateStateFromMessageQueue(log);
-                updateBulletsPositions(deltaTime);
-                checkBulletBulletCollisions();
-
-                Player loser = checkBulletPlayerCollisions();
-                if (loser != null) {
-                    Player winner = getOtherPlayer(loser);
-                    Socket winnerSocket = getPlayerSocket(winner);
-                    Socket loserSocket = getPlayerSocket(loser);
-                    winnerId = winnerSocket.playerId();
-
-                    winnerSocket.send(Message.createWinner(winnerId, stats.toString(), ActiveGames.get()));
-                    loserSocket.send(Message.createLoser());
-
-                    winnerSocket.close();
-                    loserSocket.close();
-
-                    break;
-                }
-
-                long nowTime = System.nanoTime() / 1000;
-                long sleepUs = Spec.TICK_TARGET_MICROS - (nowTime - startTime);
-                if (sleepUs > 0) {
-                    Thread.sleep(Duration.ofNanos(sleepUs * 1000));
-                }
-                lastLoopTime = startTime;
-            }
-
-            Duration elapsed = Duration.between(tickStartTime, Instant.now());
-            String elapsedStr = String.format("%.4fs", elapsed.toNanos() / 1_000_000_000.0);
-            log.logMilestone("game over", String.format(
-                "winner=%d histogram=%s active_games=%d ticks=%d elapsed=%s bullets=%d",
-                winnerId,
-                stats,
-                ActiveGames.get(),
-                ticks,
-                elapsedStr,
-                bullets.size()
-            ));
-        } catch (InterruptedException _) {
-        } finally {
-            stop();
-            ActiveGames.remove();
-        }
     }
 }

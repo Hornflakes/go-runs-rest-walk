@@ -10,7 +10,11 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.websocket.server.WebSocketUpgradeHandler;
 
+import java.time.Duration;
+
 public class Main {
+    
+    private static final Duration WEBSOCKET_IDLE_TIMEOUT = Duration.ZERO;
 
     public static void main(String[] args) throws Exception {
         boolean verbose = java.util.Arrays.asList(args).contains("--verbose");
@@ -41,9 +45,11 @@ public class Main {
 
         ServerConnector connector = new ServerConnector(server);
         connector.setPort(37373);
+        connector.setIdleTimeout(0);
         server.addConnector(connector);
 
         WebSocketUpgradeHandler wsHandler = WebSocketUpgradeHandler.from(server, container -> {
+            container.setIdleTimeout(WEBSOCKET_IDLE_TIMEOUT);
             container.addMapping("/", (req, resp, cb) -> {
                 Socket socket = pairing.createSocket();
                 socket.setOnReady(() -> pairing.register(socket));

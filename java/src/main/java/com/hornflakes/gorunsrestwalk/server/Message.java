@@ -10,11 +10,15 @@ public record Message(
     @JsonProperty("type") int type,
     @JsonProperty("msg") String msg
 ) {
+    
     public static final int HELLO = 0;
     public static final int READY = 1;
     public static final int GAME_ON = 2;
     public static final int SHOOT = 3;
     public static final int GAME_OVER = 4;
+
+    static final int CLOSE_OUT = -1;
+    static final int CLOSE_IN = -2;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

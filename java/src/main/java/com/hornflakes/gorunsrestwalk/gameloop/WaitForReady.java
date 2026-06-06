@@ -3,14 +3,11 @@ package com.hornflakes.gorunsrestwalk.gameloop;
 import com.hornflakes.gorunsrestwalk.server.Message;
 import com.hornflakes.gorunsrestwalk.server.Socket;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class WaitForReady {
 
-    private static final long READY_TIMEOUT_MS = 30_000;
-    private static final long DISCONNECT_POLL_MS = 50;
+    private static final long INBOUND_POLL_MS = 50;
 
     private WaitForReady() {}
 
@@ -18,73 +15,54 @@ public final class WaitForReady {
         s0.send(Message.createReady(s1.playerId()));
         s1.send(Message.createReady(s0.playerId()));
 
-        var latch = new CountDownLatch(2);
-        var failed = new AtomicBoolean(false);
+        long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Spec.READY_TIMEOUT_MS);
 
-        Thread t0 = Thread.ofVirtual().start(() -> {
-            if (waitForReadyMessage(s0, failed)) {
-                latch.countDown();
-            } else {
-                failed.set(true);
-            }
-        });
-
-        Thread t1 = Thread.ofVirtual().start(() -> {
-            if (waitForReadyMessage(s1, failed)) {
-                latch.countDown();
-            } else {
-                failed.set(true);
-            }
-        });
-
-        Thread watchdog = Thread.ofVirtual().start(() -> {
-            while (!failed.get()) {
-                if (s0.disconnected() || s0.closed() || s1.disconnected() || s1.closed()) {
-                    failed.set(true);
-                    t0.interrupt();
-                    t1.interrupt();
-                    return;
-                }
-                try {
-                    Thread.sleep(DISCONNECT_POLL_MS);
-                } catch (InterruptedException _) {
-                    return;
-                }
-            }
-        });
+        int count = 0;
+        boolean in0Open = true;
+        boolean in1Open = true;
 
         try {
-            boolean ok = latch.await(READY_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            if (!ok || failed.get()) {
-                failed.set(true);
-                t0.interrupt();
-                t1.interrupt();
-                watchdog.interrupt();
-                return false;
+            while (count < 2) {
+                if (s0.disconnected() || s0.closed() || s1.disconnected() || s1.closed()) {
+                    return false;
+                }
+                if (System.nanoTime() >= deadlineNanos) {
+                    return false;
+                }
+
+                if (in0Open) {
+                    Message msg = s0.pollInbound(INBOUND_POLL_MS, TimeUnit.MILLISECONDS);
+                    if (msg != null) {
+                        if (Socket.isInboundClosed(msg)) {
+                            in0Open = false;
+                        } else if (msg.type() == Message.READY) {
+                            count++;
+                            in0Open = false;
+                        }
+                    }
+                }
+
+                if (in1Open) {
+                    Message msg = s1.pollInbound(INBOUND_POLL_MS, TimeUnit.MILLISECONDS);
+                    if (msg != null) {
+                        if (Socket.isInboundClosed(msg)) {
+                            in1Open = false;
+                        } else if (msg.type() == Message.READY) {
+                            count++;
+                            in1Open = false;
+                        }
+                    }
+                }
+
+                if (!in0Open && !in1Open && count < 2) {
+                    return false;
+                }
             }
-            watchdog.interrupt();
-            return true;
         } catch (InterruptedException _) {
-            failed.set(true);
-            t0.interrupt();
-            t1.interrupt();
-            watchdog.interrupt();
+            Thread.currentThread().interrupt();
             return false;
         }
-    }
 
-    private static boolean waitForReadyMessage(Socket socket, AtomicBoolean failed) {
-        while (!failed.get()) {
-            if (socket.disconnected() || socket.closed()) return false;
-
-            try {
-                Message msg = socket.in().poll(1, TimeUnit.SECONDS);
-                if (msg == null) continue;
-                if (msg.type() == Message.READY) return true;
-            } catch (InterruptedException _) {
-                return false;
-            }
-        }
-        return false;
+        return count == 2;
     }
 }

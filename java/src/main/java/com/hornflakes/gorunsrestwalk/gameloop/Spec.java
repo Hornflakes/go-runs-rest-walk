@@ -22,4 +22,6 @@ public final class Spec {
     public static final double BULLET_SPEED_MS = 1.0;
     public static final long TICK_TARGET_MICROS = 16_000;
     public static final double MICROS_PER_MS = 1000;
+
+    public static final long READY_TIMEOUT_MS = 30_000;
 }
