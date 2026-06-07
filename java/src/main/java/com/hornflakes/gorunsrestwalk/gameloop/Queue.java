@@ -41,7 +41,7 @@ public final class Queue {
                 messages.add(new QueueMessage(from, msg));
             }
         } catch (InterruptedException e) {
-            // stopped
+            return;
         }
     }
 }

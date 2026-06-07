@@ -33,7 +33,7 @@ public final class WaitForReady {
                     Thread.sleep(50);
                 }
             } catch (InterruptedException e) {
-                // stopped
+                return;
             }
         });
 
@@ -64,7 +64,7 @@ public final class WaitForReady {
                 }
             }
         } catch (InterruptedException e) {
-            // cancelled by timeout or disconnect
+            return;
         }
     }
 }
