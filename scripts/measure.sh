@@ -3,7 +3,7 @@ set -euo pipefail
 
 pid=$1
 out=$2
-interval=${3:-1}
+interval=${3:-5}
 
 if ! kill -0 "$pid" 2>/dev/null; then
   echo "pid $pid not running" >&2

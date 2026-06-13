@@ -8,7 +8,7 @@ Concurrent WebSocket game server benchmark (Go vs TypeScript vs Java).
 2. **Warmup:** do one short load before benchmarking (required for **Java** JIT; optional but good for Go/TS - thermals, OS cache).
 3. **Measure** CPU/RAM usage with `scripts/measure.sh` during the run.
 4. **Load:** 10.000 connections x 20 games = 100.000 games; with 50ms stagger between connections; and 40 shards (250 conns/shard) 5ms interval burst, `-connections 10000 -games 20 -stagger 50 -burst`.
-5. **Compare** rolling bucket0 at saturation (~2500–3500 active games), not overall ratio alone.
+5. **Compare** rolling bucket0 at saturation, not overall ratio alone.
 6. **Optional:** Repeat thrice (`run1`, `run2`, `run3`) on the same server process.
 
 Valid run: `load finished | games_over=100000 games_failed=~0` and all clients done.
@@ -62,11 +62,10 @@ Examples: `go-N10000-G20-run1`, `ts-N10000-G20-run1`, `java-N10000-G20-run1`.
 cd scripts && go run ./load-parse-results/main.go \
   ../results/go-N10000-G20-run1-load.res
 
-cd scripts && python3 benchmark.py ../results --x active_games
-cd scripts && python3 benchmark.py ../results --x window_end
+cd scripts && python3 benchmark.py ../results   # add --lang ro for romanian labels
 ```
 
-Parsing writes `*-rolling.csv` and appends a row to `runs.csv`.
+Parsing writes `*-rolling.csv` and appends a row to `runs.csv`. `benchmark.py` writes all plots and prints a per-platform summary.
 
 ## Results layout
 
@@ -76,8 +75,9 @@ results/
   x-rolling.csv            # load-parse-results -> rolling active_games, bucket0_ratio mean
   x-measure.csv            # measure -> pidstat CPU/MEM samples
   runs.csv                 # load-parse-results -> one summary row per parsed run
-  rolling-active-games.png # benchmark.py ../results --x active_games
-  rolling-over-time.png    # benchmark.py ../results --x window_end
+  rolling-active-games.png # benchmark.py ../results
+  rolling-over-time.png    # benchmark.py ../results
+  measure-cpu-mem.png      # benchmark.py ../results
 ```
 
 x = `{lang}-N{connections}-G{games}[-tag]-run{n}`
