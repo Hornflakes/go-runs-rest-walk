@@ -26,7 +26,7 @@ cd go && taskset -c 0 go run ./cmd/server/
 
 cd ts && taskset -c 0 npm run start
 
-cd java && taskset -c 0 ./gradlew run --console=plain
+cd java && taskset -c 0 gradle run --console=plain
 ```
 
 #### 1.1 Warmup

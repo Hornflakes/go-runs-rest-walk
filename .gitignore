@@ -1,4 +1,4 @@
-results*
+results-*
 dist
 node_modules
 .gradle
