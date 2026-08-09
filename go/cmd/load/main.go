@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
+	"github.com/hornflakes/unpocologo"
 )
 
 var (
@@ -60,8 +60,8 @@ func main() {
 		fireLabel = fmt.Sprintf("burst-%dms-%dshards", *burstInterval, *burstShards)
 	}
 
-	logger.Milestone("load", fmt.Sprintf("url=%s connections=%d games=%d stagger=%s fire=%s",
-		url, *connections, *games, staggerIntervalTime, fireLabel))
+	unpocologo.Milestonef("load", "url=%s connections=%d games=%d stagger=%s fire=%s",
+		url, *connections, *games, staggerIntervalTime, fireLabel)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -93,20 +93,20 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				logger.Info("load heartbeat",
-					fmt.Sprintf("games_over=%d games_failed=%d clients_started=%d/%d clients_done=%d/%d",
-						gamesOver.Load(), gamesFailed.Load(),
-						clientsStarted.Load(), *connections,
-						clientsDone.Load(), *connections))
+				unpocologo.Infof("load heartbeat",
+					"games_over=%d games_failed=%d clients_started=%d/%d clients_done=%d/%d",
+					gamesOver.Load(), gamesFailed.Load(),
+					clientsStarted.Load(), *connections,
+					clientsDone.Load(), *connections)
 			}
 		}
 	}()
 
 	wg.Wait()
 
-	logger.Milestone("load finished",
-		fmt.Sprintf("games_over=%d games_failed=%d clients_started=%d/%d clients_done=%d/%d",
-			gamesOver.Load(), gamesFailed.Load(),
-			clientsStarted.Load(), *connections,
-			clientsDone.Load(), *connections))
+	unpocologo.Milestonef("load finished",
+		"games_over=%d games_failed=%d clients_started=%d/%d clients_done=%d/%d",
+		gamesOver.Load(), gamesFailed.Load(),
+		clientsStarted.Load(), *connections,
+		clientsDone.Load(), *connections)
 }

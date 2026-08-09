@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
+	"github.com/hornflakes/unpocologo"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -83,7 +83,7 @@ func (s *socketImpl) Close() error {
 }
 
 func (s *socketImpl) logDetail(err error) string {
-	return fmt.Sprintf("%s err=%v", logger.PlayerWithAddr(s.playerId, s.RemoteAddr()), err)
+	return fmt.Sprintf("player=%d addr=%s err=%v", s.playerId, s.RemoteAddr(), err)
 }
 
 func normalReadEnd(err error) bool {
@@ -111,7 +111,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 			mt, payload, err := socket.conn.ReadMessage()
 			if err != nil {
 				if !normalReadEnd(err) {
-					logger.Warn("websocket read ended", socket.logDetail(err))
+					unpocologo.Warn("websocket read ended", socket.logDetail(err))
 				}
 				break
 			}
@@ -122,7 +122,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 
 			msg, err := fromSocket(payload)
 			if err != nil {
-				logger.SoftError("websocket message unmarshal failed", socket.logDetail(err))
+				unpocologo.SoftError("websocket message unmarshal failed", socket.logDetail(err))
 				continue
 			}
 
@@ -138,7 +138,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 		for msg := range socket.out {
 			bytes, err := json.Marshal(msg.Message)
 			if err != nil {
-				logger.SoftError("websocket message marshal failed", socket.logDetail(err))
+				unpocologo.SoftError("websocket message marshal failed", socket.logDetail(err))
 				continue
 			}
 
@@ -148,7 +148,7 @@ func NewSocket(w http.ResponseWriter, r *http.Request) (Socket, error) {
 					continue
 				}
 
-				logger.HardError("websocket message write failed", socket.logDetail(err))
+				unpocologo.HardError("websocket message write failed", socket.logDetail(err))
 				break
 			}
 		}

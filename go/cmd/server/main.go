@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/hornflakes/go-runs-rest-walk/internal/gameloop"
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
+	"github.com/hornflakes/unpocologo"
 )
 
 func main() {
@@ -19,10 +20,10 @@ func main() {
 
 	go func() {
 		for pair := range srv.Out {
-			log := logger.ForPair(pair[0].PlayerId(), pair[1].PlayerId())
-			log.Milestone("websockets paired", "")
+			logger := unpocologo.New(fmt.Sprintf("%d vs %d", pair[0].PlayerId(), pair[1].PlayerId()))
+			logger.Milestone("websockets paired", "")
 
-			go func(p [2]server.Socket, l *logger.Logger) {
+			go func(p [2]server.Socket, l *unpocologo.Logger) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -42,13 +43,13 @@ func main() {
 				l.Milestone("websockets ready handshake ok", "")
 
 				gameloop.NewGame(p[0], p[1], *verbose).Run()
-			}(pair, log)
+			}(pair, logger)
 		}
 	}()
 
 	http.HandleFunc("/", srv.HandleNewConnection)
 
-	logger.Info("server listening", "addr=:37373")
+	unpocologo.Info("server listening", "addr=:37373")
 
 	log.Fatal(http.ListenAndServe(":37373", nil))
 }

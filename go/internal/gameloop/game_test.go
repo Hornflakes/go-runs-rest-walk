@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/hornflakes/go-runs-rest-walk/internal/gameloop"
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
+	"github.com/hornflakes/unpocologo"
 )
 
-var log = logger.ForPair(1, 2)
+var logger = unpocologo.New("1 vs 2")
 
 func startGame(t *testing.T) (*gameloop.Game, [2]*testSocket, *gameloop.Queue) {
 	t.Helper()
@@ -55,7 +55,7 @@ func TestGameUpdateStateFromMessageQueue(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Errorf("got %d bullets, want %d", got, want)
@@ -70,12 +70,12 @@ func TestGameUpdateStateFromMessageQueueRateLimit(t *testing.T) {
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	if got, want := len(gameloop.GameBullets(game)), 1; got != want {
 		t.Errorf("got %d bullets, want %d", got, want)
@@ -93,7 +93,7 @@ func TestGameUpdateBulletsPositions(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)
@@ -133,7 +133,7 @@ func TestGameCheckBulletBulletCollisions(t *testing.T) {
 	sockets[1].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	if got, want := len(gameloop.GameBullets(game)), 2; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)
@@ -161,7 +161,7 @@ func TestGameCheckBulletPlayerCollisions(t *testing.T) {
 	sockets[0].in <- shoot
 	gameloop.QueueWaitForAck(queue)
 
-	gameloop.GameUpdateStateFromMessageQueue(game, log)
+	gameloop.GameUpdateStateFromMessageQueue(game, logger)
 
 	if got, want := len(gameloop.GameBullets(game)), 1; got != want {
 		t.Fatalf("got %d bullets, want %d", got, want)

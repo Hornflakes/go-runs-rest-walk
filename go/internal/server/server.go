@@ -2,13 +2,12 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
+	"github.com/hornflakes/unpocologo"
 )
 
 type Server struct {
@@ -58,20 +57,14 @@ func (s *Server) registerSocket(socket Socket) {
 func (s *Server) HandleNewConnection(w http.ResponseWriter, r *http.Request) {
 	socket, err := NewSocket(w, r)
 	if err != nil {
-		logger.HardError(
-			"websocket upgrade failed",
-			fmt.Sprintf("addr=%s err=%v", r.RemoteAddr, err),
-		)
+		unpocologo.HardErrorf("websocket upgrade failed", "addr=%s err=%v", r.RemoteAddr, err)
 		return
 	}
 	s.registerSocket(socket)
 
 	socket.Out() <- CreateHelloMessage(socket.PlayerId())
 
-	logger.Info(
-		"websocket connected",
-		logger.PlayerWithAddr(socket.PlayerId(), socket.RemoteAddr()),
-	)
+	unpocologo.Infof("websocket connected", "player=%d addr=%s", socket.PlayerId(), socket.RemoteAddr())
 }
 
 func WatchPairDisconnect(ctx context.Context, cancel context.CancelFunc, s0, s1 Socket) {

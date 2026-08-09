@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hornflakes/go-runs-rest-walk/internal/logger"
 	"github.com/hornflakes/go-runs-rest-walk/internal/server"
 	"github.com/hornflakes/go-runs-rest-walk/internal/stats"
+	"github.com/hornflakes/unpocologo"
 )
 
 type Game struct {
@@ -46,7 +46,7 @@ func (g *Game) stop() {
 	}
 }
 
-func (g *Game) updateStateFromMessageQueue(log *logger.Logger) {
+func (g *Game) updateStateFromMessageQueue(logger *unpocologo.Logger) {
 	messages := g.queue.Flush()
 	for _, message := range messages {
 		if message.Message.Type == server.Shoot {
@@ -58,9 +58,8 @@ func (g *Game) updateStateFromMessageQueue(log *logger.Logger) {
 				g.bullets = append(g.bullets, &bullet)
 
 				if g.verbose {
-					log.Info("player shot", fmt.Sprintf("%s bullet=%d",
-						logger.Player(g.sockets[message.From-1].PlayerId()),
-						len(g.bullets)))
+					logger.Infof("player shot", "player=%d bullet=%d",
+						g.sockets[message.From-1].PlayerId(), len(g.bullets))
 				}
 			}
 		}
@@ -120,12 +119,12 @@ func (g *Game) Run() {
 	stats.AddActiveGame()
 	defer stats.RemoveActiveGame()
 
-	log := logger.ForPair(g.sockets[0].PlayerId(), g.sockets[1].PlayerId())
+	logger := unpocologo.New(fmt.Sprintf("%d vs %d", g.sockets[0].PlayerId(), g.sockets[1].PlayerId()))
 
 	g.sockets[0].Out() <- server.CreateSocketMessage(server.GameOn)
 	g.sockets[1].Out() <- server.CreateSocketMessage(server.GameOn)
 
-	log.Info("game on", "")
+	logger.Info("game on", "")
 
 	var winnerId uint64
 	ticks := 0
@@ -143,7 +142,7 @@ func (g *Game) Run() {
 			g.stats.AddDeltaTime(deltaTime)
 		}
 
-		g.updateStateFromMessageQueue(log)
+		g.updateStateFromMessageQueue(logger)
 		g.updateBulletsPositions(deltaTime)
 		g.checkBulletBulletCollisions()
 
@@ -171,7 +170,7 @@ func (g *Game) Run() {
 		lastLoopTime = startTime
 	}
 
-	log.Milestone("game over", fmt.Sprintf(
+	logger.Milestonef("game over",
 		"winner=%d histogram=%s active_games=%d ticks=%d elapsed=%s bullets=%d",
 		winnerId,
 		g.stats,
@@ -179,5 +178,5 @@ func (g *Game) Run() {
 		ticks,
 		g.clock.Now().Sub(tickStartTime),
 		len(g.bullets),
-	))
+	)
 }
